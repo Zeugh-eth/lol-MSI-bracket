@@ -21,22 +21,26 @@
     return a;
   }
   const QFS = [[0,1],[2,3],[4,5],[6,7]];
+  // Official MSI seeding: quarterfinals pair Pool 1 vs Pool 4 and Pool 2 vs Pool 3.
   function satisfies(draw, byShort) {
     return QFS.every(([i, j]) => {
       const A = byShort[draw[i]], B = byShort[draw[j]];
       if (!A || !B) return false;
-      const oneHighOneLow = (A.pool <= 2) !== (B.pool <= 2);
+      const pools = [A.pool, B.pool].sort((x, y) => x - y).join('-');
+      const validPair = pools === '1-4' || pools === '2-3';
       const diffRegion = A.region !== B.region;
-      return oneHighOneLow && diffRegion;
+      return validPair && diffRegion;
     });
   }
   function generate(teams, rng) {
     const byShort = Object.fromEntries(teams.map(t => [t.short, t]));
-    const high = teams.filter(t => t.pool <= 2).map(t => t.short);
-    const low = teams.filter(t => t.pool > 2).map(t => t.short);
+    const byPool = p => teams.filter(t => t.pool === p).map(t => t.short);
     for (let attempt = 0; attempt < 500; attempt++) {
-      const h = shuffle(high, rng), l = shuffle(low, rng);
-      const draw = [h[0], l[0], h[1], l[1], h[2], l[2], h[3], l[3]];
+      const p1 = shuffle(byPool(1), rng), p2 = shuffle(byPool(2), rng),
+            p3 = shuffle(byPool(3), rng), p4 = shuffle(byPool(4), rng);
+      // QF1: P1 v P4 | QF2: P2 v P3 | QF3: P1 v P4 | QF4: P2 v P3
+      // (the two Pool-1 teams land in opposite halves so they can only meet in the final)
+      const draw = [p1[0], p4[0], p2[0], p3[0], p1[1], p4[1], p2[1], p3[1]];
       if (satisfies(draw, byShort)) return draw;
     }
     throw new Error('could not satisfy draw constraints');
