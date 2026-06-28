@@ -17,9 +17,12 @@ test('pools are balanced: four high (1-2) and four low (3-4)', () => {
   assert.equal(high, 4);
   assert.equal(DATA.teams.length - high, 4);
 });
-test('14 canonical match ids and dates for each', () => {
+test('14 canonical match ids and a UTC schedule time for each', () => {
   assert.equal(DATA.matchIds.length, 14);
-  for (const id of DATA.matchIds) assert.ok(id in DATA.dates, `date for ${id}`);
+  for (const id of DATA.matchIds) {
+    assert.ok(id in DATA.schedule, `schedule for ${id}`);
+    assert.match(DATA.schedule[id], /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/, `ISO UTC for ${id}`);
+  }
 });
 test('four play-in candidates', () => {
   assert.equal(DATA.playInCandidates.length, 4);

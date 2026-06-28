@@ -21,12 +21,16 @@
     { short: 'DCGTW', name: 'Deep Cross Gaming', region: 'APAC', color: '#00a3a3', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/4/4c/Deep_Cross_Gaminglogo_square.png/revision/latest?cb=20260121020453' },
   ];
   const matchIds = ['WQF1','WQF2','WQF3','WQF4','WSF1','WSF2','WBF','LR1A','LR1B','LR2A','LR2B','LR3','LBF','GF'];
-  // Best-effort dates from the wiki schedule; null where unknown. Edit as schedule firms up.
-  const dates = {
-    WQF1:'2026-07-01', WQF2:'2026-07-01', WQF3:'2026-07-02', WQF4:'2026-07-02',
-    LR1A:'2026-07-03', LR1B:'2026-07-03', WSF1:'2026-07-04', WSF2:'2026-07-04',
-    LR2A:'2026-07-05', LR2B:'2026-07-05', LR3:'2026-07-06', WBF:'2026-07-08',
-    LBF:'2026-07-10', GF:'2026-07-11',
+  // Scheduled start times (UTC, ISO) for each bracket slot, from Leaguepedia's
+  // MatchSchedule. The UI converts these to the viewer's chosen timezone.
+  const schedule = {
+    WQF1:'2026-07-03T03:00:00Z', WQF2:'2026-07-03T08:00:00Z',
+    WQF3:'2026-07-04T03:00:00Z', WQF4:'2026-07-04T08:00:00Z',
+    LR1A:'2026-07-05T03:00:00Z', LR1B:'2026-07-06T03:00:00Z',
+    WSF1:'2026-07-05T08:00:00Z', WSF2:'2026-07-06T08:00:00Z',
+    LR2A:'2026-07-08T03:00:00Z', LR2B:'2026-07-08T08:00:00Z',
+    LR3:'2026-07-10T08:00:00Z',  WBF:'2026-07-09T08:00:00Z',
+    LBF:'2026-07-11T08:00:00Z',  GF:'2026-07-12T08:00:00Z',
   };
-  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, dates };
+  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, schedule };
 });

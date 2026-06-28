@@ -9,18 +9,45 @@ const SHARE_SCHEMA = {
   matchIds: DATA.matchIds,
 };
 
-// Date display: "2026-07-01" -> "July 1st, Wednesday"
-const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Timezone-aware date/time display. Schedule times are stored in UTC; we render
+// them in the viewer's chosen timezone so kickoff is correct wherever they watch.
 function ordinal(n) {
   const v = n % 100, s = ['th','st','nd','rd'];
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
-function fmtDate(iso) {
-  if (!iso) return 'Date TBD';
-  const d = new Date(iso + 'T00:00:00');
-  if (isNaN(d.getTime())) return iso;
-  return MONTHS[d.getMonth()] + ' ' + ordinal(d.getDate()) + ', ' + WEEKDAYS[d.getDay()];
+const TIMEZONES = [
+  { z: 'America/Sao_Paulo',    label: 'Brazil · BRT (UTC−3)' },
+  { z: 'America/New_York',     label: 'US East · ET' },
+  { z: 'America/Los_Angeles',  label: 'US West · PT' },
+  { z: 'Europe/London',        label: 'UK · GMT/BST' },
+  { z: 'Europe/Paris',         label: 'Europe · CET' },
+  { z: 'Asia/Seoul',           label: 'Korea · KST' },
+  { z: 'Asia/Shanghai',        label: 'China · CST' },
+  { z: 'Asia/Ho_Chi_Minh',     label: 'Vietnam · ICT' },
+  { z: 'UTC',                  label: 'UTC' },
+];
+const DEFAULT_TZ = 'America/Sao_Paulo'; // UTC−3
+function dtParts(iso, tz) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  let parts;
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, weekday: 'long', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(d);
+  } catch (e) { return null; } // bad tz id
+  const g = t => (parts.find(p => p.type === t) || {}).value || '';
+  return { wd: g('weekday'), mo: g('month'), day: parseInt(g('day'), 10), hh: g('hour'), mm: g('minute') };
+}
+function fmtShort(iso, tz) { // for match cards
+  const p = dtParts(iso, tz);
+  return p ? `${p.wd.slice(0, 3)}, ${p.mo.slice(0, 3)} ${p.day} · ${p.hh}:${p.mm}` : 'TBD';
+}
+function fmtLong(iso, tz) { // for the drawer
+  const p = dtParts(iso, tz);
+  return p ? `${p.mo} ${ordinal(p.day)}, ${p.wd} · ${p.hh}:${p.mm}` : 'Date TBD';
 }
 
 function TeamLogo({ short }) {
@@ -82,7 +109,7 @@ function ChipTray({ draw, playInPick }) {
   );
 }
 
-function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, selected }) {
+function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, selected, tz }) {
   const r = Engine.resolveMatch(id, draw, scores);
   const sc = scores[id] || { a: 0, b: 0 };
   const live = r.teamA && r.teamB && !r.winner;
@@ -109,7 +136,7 @@ function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, onPlace, onQuic
       <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
         seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} onPlace={isQF ? onPlace : undefined}
         onDoubleClick={bothPresent ? quickWin('b') : undefined} />
-      <div className="meta"><span className="date">{fmtDate(DATA.dates[id])}</span><span className="bo5">BO5</span></div>
+      <div className="meta"><span className="date">{fmtShort(DATA.schedule[id], tz)}</span><span className="bo5">BO5</span></div>
     </div>
   );
 }
@@ -229,7 +256,7 @@ function H2HPanel({ a, b }) {
   );
 }
 
-function Drawer({ id, draw, scores, onScore, onClose }) {
+function Drawer({ id, draw, scores, onScore, onClose, tz }) {
   const isOpen = !!id;
   const r = isOpen ? Engine.resolveMatch(id, draw, scores) : {};
   const sc = isOpen ? (scores[id] || { a: 0, b: 0 }) : { a: 0, b: 0 };
@@ -243,7 +270,7 @@ function Drawer({ id, draw, scores, onScore, onClose }) {
         {isOpen && <>
           <button className="close" onClick={onClose}>×</button>
           <h2>{id} · BO5</h2>
-          <div className="drawer-date">{fmtDate(DATA.dates[id])}</div>
+          <div className="drawer-date">{fmtLong(DATA.schedule[id], tz)}</div>
           <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
           <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
           {r.winner && <div className="winner-tag">Winner — {nameOf(r.winner)}</div>}
@@ -266,9 +293,9 @@ const LB_COLUMNS = [
   { title: 'LB Final', ids: ['LBF'] },
 ];
 
-function BracketView({ draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, openId }) {
+function BracketView({ draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, openId, tz }) {
   const mc = (id) => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen}
-    justDrew={justDrew} onSwap={onSwap} onPlace={onPlace} onQuickWin={onQuickWin} selected={id === openId} />;
+    justDrew={justDrew} onSwap={onSwap} onPlace={onPlace} onQuickWin={onQuickWin} selected={id === openId} tz={tz} />;
   const col = (c) => (
     <div className="col" key={c.title}>
       <h3>{c.title}</h3>
@@ -287,7 +314,7 @@ function BracketView({ draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickW
   );
 }
 
-function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied }) {
+function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied, tz, onTz }) {
   return (
     <div className="topbar">
       <div className="brand">
@@ -304,6 +331,11 @@ function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied }) {
       <button className="btn primary" onClick={onDraw}>↯ Draw</button>
       <button className="btn" onClick={onCopy}>{copied ? 'Copied ✓' : 'Copy link'}</button>
       <button className="btn ghost" onClick={onReset}>Reset</button>
+      <label className="pick tz">🌐
+        <select value={tz} onChange={e => onTz(e.target.value)} title="Show match times in this timezone">
+          {TIMEZONES.map(t => <option key={t.z} value={t.z}>{t.label}</option>)}
+        </select>
+      </label>
     </div>
   );
 }
@@ -323,6 +355,17 @@ function App() {
   const [openId, setOpenId] = useState(null);
   const [copied, setCopied] = useState(false);
   const [justDrew, setJustDrew] = useState(false);
+  const [tz, setTz] = useState(DEFAULT_TZ);
+
+  // Timezone is a viewer preference: persisted on its own, never part of the
+  // shared scenario or its link.
+  useEffect(() => {
+    try { const t = window.localStorage.getItem('msi2026tz'); if (t) setTz(t); } catch (e) {}
+  }, []);
+  const changeTz = useCallback(z => {
+    setTz(z);
+    try { window.localStorage.setItem('msi2026tz', z); } catch (e) {}
+  }, []);
 
   // hydrate once: URL hash beats localStorage
   useEffect(() => {
@@ -366,16 +409,16 @@ function App() {
 
   return (
     <div>
-      <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
+      <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} tz={tz} onTz={changeTz} />
       <ChipTray draw={draw} playInPick={playInPick} />
       <div className="layout">
-        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} onPlace={doPlace} onQuickWin={doQuickWin} openId={openId} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} onPlace={doPlace} onQuickWin={doQuickWin} openId={openId} tz={tz} />
         <div className="side">
           <StandingsTable draw={displayDraw} scores={scores} />
           <RulesBox />
         </div>
       </div>
-      <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
+      <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} tz={tz} />
     </div>
   );
 }
