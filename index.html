@@ -519,6 +519,7 @@ function App() {
   useEffect(() => {
     if (firstSave.current) { firstSave.current = false; return; }
     Persist.save({ draw, scores, playInPick }, window.localStorage);
+    if (location.hash) history.replaceState(null, '', location.pathname);
   }, [draw, scores, playInPick]);
 
   const doScore = useCallback((id, a, b) => setScores(s => Engine.setScore(s, id, a, b)), []);
