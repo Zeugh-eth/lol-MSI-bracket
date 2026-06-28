@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MSI 2026 — Stage 2 Bracket Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style id="appstyle">/* ============================================================
+   MSI26 — Stage 2 Bracket Simulator
+   Visual identity: punk / zine "ink & paper" — bone newsprint,
+   ink black, vermillion red, highlighter yellow. Heavy condensed
+   display type (Anton), grain, brush underlines, painted blocks.
+   ============================================================ */
+:root{
+  --paper:#ECEAE3; --paper-bright:#fbfaf6; --paper2:#dedbd0;
+  --ink:#141210; --ink2:#0d0c0b; --canvas:#100f0d;
+  --red:#E8462E; --red-deep:#bf3014; --yellow:#F2E84B;
+  --line:rgba(236,234,227,.22);
+  --muted:#8c8a83; --win:#E8462E;
+  --disp:'Anton','Archivo Black',Impact,system-ui,sans-serif;
+  --body:'Archivo','Inter','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--canvas); color:var(--paper);
+  font:15px/1.45 var(--body);
+  -webkit-font-smoothing:antialiased;
+}
+/* global film grain */
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+  opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Top bar (paper strip) ---------- */
+.topbar{
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  padding:14px 22px; position:sticky; top:0; z-index:30;
+  background:var(--paper);
+  border-bottom:5px solid var(--red);
+  box-shadow:0 2px 0 var(--ink), 0 14px 30px rgba(0,0,0,.5);
+}
+.topbar .brand{position:relative; display:flex; flex-direction:column; line-height:.82; padding-right:8px}
+.brand-word{font-family:var(--disp); font-size:38px; letter-spacing:-1px; color:var(--ink); text-transform:uppercase}
+.brand-word em{font-style:normal; color:var(--red); -webkit-text-stroke:0}
+.brand-word::after{ /* yellow highlighter swipe */
+  content:''; display:block; height:9px; margin-top:-6px; width:108%;
+  background:var(--yellow); transform:skewX(-12deg);
+  clip-path:polygon(1% 30%,99% 0,100% 75%,0% 100%);
+  mix-blend-mode:multiply;
+}
+.brand-tag{font-family:var(--disp); font-size:12px; letter-spacing:3px; color:var(--ink);
+  text-transform:uppercase; opacity:.62; margin-top:7px}
+.topbar .spacer{flex:1}
+.topbar .pick{display:flex; align-items:center; gap:8px; font-family:var(--disp);
+  text-transform:uppercase; letter-spacing:1px; font-size:12px; color:var(--ink)}
+select{
+  font:600 13px var(--body); color:var(--ink); background:var(--paper-bright);
+  border:2px solid var(--ink); border-radius:0; padding:7px 10px; cursor:pointer;
+}
+
+/* buttons */
+button.btn{
+  font-family:var(--disp); text-transform:uppercase; letter-spacing:1px; font-size:14px;
+  background:var(--ink); color:var(--paper); border:2px solid var(--ink); border-radius:0;
+  padding:9px 18px; cursor:pointer; transition:transform .08s, background .12s, color .12s;
+}
+button.btn:hover{background:var(--red); border-color:var(--red); color:var(--paper); transform:translateY(-1px)}
+button.btn:active{transform:translateY(1px)}
+button.btn.primary{background:var(--red); border-color:var(--ink); color:var(--paper);
+  box-shadow:4px 4px 0 var(--ink)}
+button.btn.primary:hover{background:var(--red-deep)}
+button.btn.ghost{background:transparent; color:var(--ink)}
+button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
+
+/* ---------- Layout ---------- */
+.layout{display:flex; gap:26px; padding:26px 22px 60px; align-items:flex-start}
+.bracket{flex:1; overflow-x:auto; padding-bottom:20px}
+
+/* section titles — big condensed with red brush underline */
+.section-title{
+  font-family:var(--disp); text-transform:uppercase; letter-spacing:1px;
+  font-size:30px; color:var(--paper); margin:6px 0 22px; position:relative;
+  display:inline-block; padding-bottom:8px;
+}
+.section-title::after{
+  content:''; position:absolute; left:-4px; bottom:-2px; width:calc(100% + 26px); height:11px;
+  background:var(--red); transform:skewX(-10deg) rotate(-.6deg);
+  clip-path:polygon(0 35%,97% 0,100% 70%,2% 100%);
+}
+
+.cols{display:flex; gap:48px; min-width:max-content; position:relative}
+.col{display:flex; flex-direction:column; gap:20px}
+.col h3{
+  font-family:var(--disp); font-size:13px; color:var(--paper); text-transform:uppercase;
+  letter-spacing:2px; text-align:center; margin:0 0 2px; padding:6px 4px;
+  border-bottom:2px solid var(--red); opacity:.92;
+}
+
+/* ---------- Match cards (painted blocks on ink) ---------- */
+.match{width:236px; display:flex; flex-direction:column; gap:3px; cursor:pointer;
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.55)); transition:transform .1s}
+.match:hover{transform:translateX(2px)}
+.match:hover .row{background:var(--paper-bright)}
+.match.live .row:not(.winner){box-shadow:inset 3px 0 0 var(--red)} /* subtle "playable now" tick */
+.match.selected{outline:3px solid var(--yellow); outline-offset:4px} /* the focused match */
+.row{
+  display:flex; align-items:center; gap:9px; padding:8px 10px;
+  background:var(--paper); color:var(--ink);
+  clip-path:polygon(0 6%,100% 0,99.5% 92%,1% 100%); /* torn-paper edge */
+}
+.row.winner{background:var(--red); color:var(--paper)}
+.row .logo{width:24px; height:24px; object-fit:contain; flex:0 0 auto;
+  background:var(--paper-bright); border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.row.winner .logo{border-color:var(--paper)}
+.row .badge{width:24px; height:24px; border-radius:3px; display:flex; align-items:center;
+  justify-content:center; font:800 9px var(--body); color:#fff; flex:0 0 auto; border:1.5px solid var(--ink)}
+.row .name{flex:1; font:700 13px var(--body); white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; letter-spacing:.2px}
+.row .name.tbd{color:#9a978f; font-weight:600; font-style:italic}
+.row .score{font-family:var(--disp); font-size:20px; width:24px; text-align:center;
+  color:var(--ink); font-variant-numeric:tabular-nums}
+.row.winner .score{color:var(--paper)}
+.match .meta{display:flex; justify-content:space-between; padding:3px 4px 0;
+  font:700 10px var(--body); letter-spacing:1px; color:var(--muted)}
+.match .meta .bo5{color:var(--red); font-family:var(--disp); letter-spacing:1px}
+.dropslot{outline:2px dashed var(--yellow); outline-offset:-2px}
+
+/* ---------- Standings (paper poster) ---------- */
+.standings{width:300px; flex:0 0 auto; background:var(--paper); color:var(--ink);
+  padding:16px 18px 20px; filter:drop-shadow(5px 5px 0 rgba(0,0,0,.5));
+  clip-path:polygon(0 1%,100% 0,99.6% 99%,.4% 100%)}
+.standings .section-title{color:var(--ink); font-size:24px; margin:2px 0 16px}
+.standings .section-title::after{background:var(--red)}
+.standings table{width:100%; border-collapse:collapse}
+.standings td{padding:7px 4px; border-bottom:1.5px solid rgba(20,18,16,.14); vertical-align:middle}
+.standings tr:last-child td{border-bottom:none}
+.standings .pl{font-family:var(--disp); font-size:18px; color:var(--red); width:62px; letter-spacing:.5px}
+.standings td .logo{width:22px; height:22px; object-fit:contain; background:var(--paper-bright);
+  border:1.5px solid var(--ink); border-radius:3px; padding:1px; display:block}
+.standings td .badge{width:22px; height:22px; border-radius:3px; display:flex; align-items:center;
+  justify-content:center; font:800 9px var(--body); color:#fff; border:1.5px solid var(--ink)}
+.standings td:last-child{font:700 13px var(--body)}
+.standings tr.out{opacity:.45}
+.standings tr.out td:last-child{text-decoration:line-through}
+
+/* ---------- Chip tray (red painted team chips) ---------- */
+.poolbar{display:flex; gap:10px; flex-wrap:wrap; padding:4px 22px 0}
+.chip{display:flex; align-items:center; gap:7px; background:var(--red); color:var(--paper);
+  border:2px solid var(--ink); padding:4px 12px 4px 5px; cursor:grab;
+  font-family:var(--disp); letter-spacing:1px; font-size:13px; text-transform:uppercase;
+  clip-path:polygon(1% 8%,100% 0,99% 90%,0 100%); box-shadow:3px 3px 0 rgba(0,0,0,.45)}
+.chip[draggable=true]:active{cursor:grabbing; transform:scale(.97)}
+.chip .logo{width:20px; height:20px; object-fit:contain; background:var(--paper-bright);
+  border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.chip .badge{width:20px; height:20px; border-radius:3px; display:flex; align-items:center;
+  justify-content:center; font:800 8px var(--body); color:#fff; border:1.5px solid var(--ink)}
+
+/* reveal */
+.reveal{animation:pop .4s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.6) rotate(-2deg);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ---------- Connectors (thin light lines on ink) ---------- */
+.col:not(:last-child){position:relative}
+.col:not(:last-child)::after{content:'';position:absolute;top:42px;right:-24px;bottom:42px;width:2px;
+  background:linear-gradient(to bottom,transparent 0,var(--line) 14%,var(--line) 86%,transparent 100%);pointer-events:none}
+.col:not(:last-child)::before{content:'';position:absolute;top:50%;right:-24px;width:24px;height:2px;
+  background:var(--line);pointer-events:none}
+
+/* ---------- Drawer ---------- */
+.drawer{position:fixed; top:0; right:0; height:100%; width:380px; background:var(--ink2);
+  color:var(--paper); border-left:5px solid var(--red); box-shadow:-24px 0 50px rgba(0,0,0,.6);
+  transform:translateX(100%); transition:transform .22s ease; z-index:40; padding:22px; overflow-y:auto}
+.drawer.open{transform:translateX(0)}
+.drawer h2{font-family:var(--disp); font-size:26px; letter-spacing:1px; text-transform:uppercase; margin:0 4px 2px 0}
+.drawer .close{position:absolute; top:14px; right:14px; cursor:pointer; color:var(--paper);
+  background:none; border:none; font-size:26px; line-height:1; font-family:var(--disp)}
+.scorebox{display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--paper); color:var(--ink); padding:11px 12px; margin:10px 0;
+  clip-path:polygon(0 5%,100% 0,99.5% 95%,.5% 100%); font:700 14px var(--body)}
+.scorebox .logo{width:24px;height:24px;object-fit:contain;background:var(--paper-bright);
+  border:1.5px solid var(--ink);border-radius:3px;padding:1px;vertical-align:middle;margin-right:6px}
+.scorebox .badge{width:24px;height:24px;border-radius:3px;display:inline-flex;align-items:center;
+  justify-content:center;font:800 9px var(--body);color:#fff;border:1.5px solid var(--ink);vertical-align:middle;margin-right:6px}
+.stepper{display:flex; align-items:center; gap:8px}
+.stepper button{width:30px; height:30px; border:2px solid var(--ink); background:var(--ink);
+  color:var(--paper); cursor:pointer; font-family:var(--disp); font-size:18px; line-height:1}
+.stepper button:hover{background:var(--red); border-color:var(--red)}
+.stepper .score{font-family:var(--disp); color:var(--ink)}
+.drawer .winner-tag{font-family:var(--disp); text-transform:uppercase; letter-spacing:1px;
+  font-size:18px; color:var(--yellow); margin-top:6px}
+.h2h{margin-top:20px; padding:16px; border:2px dashed var(--line); color:var(--muted);
+  text-align:center; font-family:var(--disp); letter-spacing:1px; text-transform:uppercase; font-size:13px}
+.drawer-backdrop{position:fixed; inset:0; background:rgba(10,9,8,.6); z-index:35; transition:opacity .2s}
+.drawer-backdrop.hidden{opacity:0; pointer-events:none}
+
+/* scrollbar flavor */
+.bracket::-webkit-scrollbar{height:10px}
+.bracket::-webkit-scrollbar-thumb{background:var(--red); border:2px solid var(--canvas)}
+</style>
+</head>
+<body>
+<div id="root">Loading… (this page needs an internet connection on first load for React)</div>
+<script>
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  // Logos use Leaguepedia "square" variants (the bracket-icon form), shown on a light tile.
+  const teams = [
+    { short: 'BLG',   name: 'Bilibili Gaming',      region: 'CN',   pool: 1, color: '#1a2a6c', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/9/91/Bilibili_Gaminglogo_square.png/revision/latest?cb=20260109092043' },
+    { short: 'G2',    name: 'G2 Esports',           region: 'EMEA', pool: 1, color: '#ee3d23', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/7/77/G2_Esportslogo_square.png/revision/latest?cb=20210810013355' },
+    { short: 'HLE',   name: 'Hanwha Life Esports',  region: 'KR',   pool: 2, color: '#ff7900', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/a/a6/Hanwha_Life_Esportslogo_square.png/revision/latest?cb=20211024145058' },
+    { short: 'LYON',  name: 'Lyon',                 region: 'NA',   pool: 2, color: '#1e9de3', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/5/54/LYON_%282024_American_Team%29logo_square.png/revision/latest?cb=20250109185221' },
+    { short: 'TSTW',  name: 'Team Secret Whales',   region: 'APAC', pool: 3, color: '#0b8457', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/a/ac/Team_Secret_Whaleslogo_square.png/revision/latest?cb=20260330071358' },
+    { short: 'FURIA', name: 'FURIA',                region: 'BR',   pool: 3, color: '#000000', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/f/f2/FURIAlogo_square.png/revision/latest?cb=20211007041545' },
+    { short: 'TES',   name: 'Top Esports',          region: 'CN',   pool: 4, color: '#e60012', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/4/46/Top_Esportslogo_square.png/revision/latest?cb=20260109111428' },
+    { short: 'PIW',   name: 'Play-In Winner',       region: 'INT',  pool: 4, color: '#6c5ce7', logoUrl: null },
+  ];
+  const playInCandidates = [
+    { short: 'KCORP', name: 'Karmine Corp',      region: 'EMEA', color: '#0a3cff', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/2/2d/Karmine_Corplogo_square.png/revision/latest?cb=20260110072726' },
+    { short: 'T1',    name: 'T1',                region: 'KR',   color: '#e2012d', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/a/a2/T1logo_square.png/revision/latest?cb=20230512040747' },
+    { short: 'TL',    name: 'Team Liquid',       region: 'NA',   color: '#04193e', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/f/f4/Team_Liquidlogo_square.png/revision/latest?cb=20251229063951' },
+    { short: 'DCGTW', name: 'Deep Cross Gaming', region: 'APAC', color: '#00a3a3', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/4/4c/Deep_Cross_Gaminglogo_square.png/revision/latest?cb=20260121020453' },
+  ];
+  const matchIds = ['WQF1','WQF2','WQF3','WQF4','WSF1','WSF2','WBF','LR1A','LR1B','LR2A','LR2B','LR3','LBF','GF'];
+  // Best-effort dates from the wiki schedule; null where unknown. Edit as schedule firms up.
+  const dates = {
+    WQF1:'2026-07-01', WQF2:'2026-07-01', WQF3:'2026-07-02', WQF4:'2026-07-02',
+    LR1A:'2026-07-03', LR1B:'2026-07-03', WSF1:'2026-07-04', WSF2:'2026-07-04',
+    LR2A:'2026-07-05', LR2B:'2026-07-05', LR3:'2026-07-06', WBF:'2026-07-08',
+    LBF:'2026-07-10', GF:'2026-07-11',
+  };
+  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, dates };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  // Source: {seed:n} | {winner:id} | {loser:id}
+  const GRAPH = {
+    WQF1: { round: 1, a: { seed: 0 }, b: { seed: 1 } },
+    WQF2: { round: 1, a: { seed: 2 }, b: { seed: 3 } },
+    WQF3: { round: 1, a: { seed: 4 }, b: { seed: 5 } },
+    WQF4: { round: 1, a: { seed: 6 }, b: { seed: 7 } },
+    LR1A: { round: 1, a: { loser: 'WQF1' }, b: { loser: 'WQF2' } },
+    LR1B: { round: 1, a: { loser: 'WQF3' }, b: { loser: 'WQF4' } },
+    WSF1: { round: 2, a: { winner: 'WQF1' }, b: { winner: 'WQF2' } },
+    WSF2: { round: 2, a: { winner: 'WQF3' }, b: { winner: 'WQF4' } },
+    LR2A: { round: 2, a: { winner: 'LR1A' }, b: { loser: 'WSF2' } }, // cross-seed
+    LR2B: { round: 2, a: { winner: 'LR1B' }, b: { loser: 'WSF1' } }, // cross-seed
+    LR3:  { round: 3, a: { winner: 'LR2A' }, b: { winner: 'LR2B' } },
+    WBF:  { round: 4, a: { winner: 'WSF1' }, b: { winner: 'WSF2' } },
+    LBF:  { round: 4, a: { winner: 'LR3' },  b: { loser: 'WBF' } },
+    GF:   { round: 5, a: { winner: 'WBF' },  b: { winner: 'LBF' } },
+  };
+
+  function isValidBo5(a, b) {
+    if (a < 0 || b < 0 || a > 3 || b > 3) return false;
+    if (a === 3 && b === 3) return false;
+    return true;
+  }
+
+  function emptyScores() {
+    const s = {};
+    for (const id of Object.keys(GRAPH)) s[id] = { a: 0, b: 0 };
+    return s;
+  }
+
+  function resolveSource(src, draw, scores) {
+    if ('seed' in src) return draw ? (draw[src.seed] ?? null) : null;
+    const r = resolveMatch(src.winner || src.loser, draw, scores);
+    if ('winner' in src) return r.winner;
+    return r.loser;
+  }
+
+  function resolveMatch(matchId, draw, scores) {
+    const m = GRAPH[matchId];
+    const teamA = resolveSource(m.a, draw, scores);
+    const teamB = resolveSource(m.b, draw, scores);
+    let winner = null, loser = null;
+    const sc = scores[matchId] || { a: 0, b: 0 };
+    if (teamA && teamB && isValidBo5(sc.a, sc.b)) {
+      if (sc.a === 3) { winner = teamA; loser = teamB; }
+      else if (sc.b === 3) { winner = teamB; loser = teamA; }
+    }
+    return { teamA, teamB, winner, loser };
+  }
+
+  // ids strictly downstream of a given match (anything that consumes its winner/loser, transitively)
+  function downstreamOf(matchId) {
+    const out = new Set();
+    let frontier = [matchId];
+    while (frontier.length) {
+      const next = [];
+      for (const id of Object.keys(GRAPH)) {
+        const m = GRAPH[id];
+        const refs = [m.a, m.b].filter(s => !('seed' in s)).map(s => s.winner || s.loser);
+        if (refs.some(r => frontier.includes(r)) && !out.has(id)) { out.add(id); next.push(id); }
+      }
+      frontier = next;
+    }
+    return out;
+  }
+
+  function setScore(scores, matchId, a, b) {
+    const copy = {};
+    for (const id of Object.keys(scores)) copy[id] = { a: scores[id].a, b: scores[id].b };
+    copy[matchId] = { a, b };
+    for (const id of downstreamOf(matchId)) copy[id] = { a: 0, b: 0 };
+    return copy;
+  }
+
+  return { __name: 'MSI_Engine', GRAPH, isValidBo5, emptyScores, resolveMatch, setScore, downstreamOf };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  // Where a loss eliminates you -> finishing place. (GF loser = 2nd, GF winner = 1st handled separately.)
+  const ELIM_PLACE = {
+    LR1A: 7, LR1B: 7, // out in losers round 1
+    LR2A: 5, LR2B: 5, // out in losers round 2
+    LR3: 4,           // out in losers round 3
+    LBF: 3,           // out in losers final
+  };
+  const LABELS = { 1:'1st', 2:'2nd', 3:'3rd', 4:'4th', 5:'5th–6th', 7:'7th–8th' };
+
+  function compute(Engine, draw, scores) {
+    const place = {};   // short -> number
+    const alive = {};   // short -> bool
+    for (const t of (draw || [])) if (t) alive[t] = true;
+
+    // losers-bracket + LB final eliminations
+    for (const id of Object.keys(ELIM_PLACE)) {
+      const r = Engine.resolveMatch(id, draw, scores);
+      if (r.loser) { place[r.loser] = ELIM_PLACE[id]; alive[r.loser] = false; }
+    }
+    // grand final
+    const gf = Engine.resolveMatch('GF', draw, scores);
+    if (gf.winner) { place[gf.winner] = 1; alive[gf.winner] = false;
+                     place[gf.loser] = 2; alive[gf.loser] = false; }
+
+    const rows = (draw || []).filter(Boolean).map(short => ({
+      short,
+      place: place[short] != null ? place[short] : null,
+      placeLabel: place[short] != null ? LABELS[place[short]] : '—',
+      alive: alive[short] !== false,
+    }));
+    rows.sort((x, y) => {
+      // Still-competing teams lead the table; eliminated teams sink to the
+      // bottom ordered by finishing place. Once the tournament completes,
+      // every team is eliminated, so this collapses to pure 1st..8th order.
+      if (x.alive !== y.alive) return x.alive ? -1 : 1;
+      const px = x.place == null ? 99 : x.place;
+      const py = y.place == null ? 99 : y.place;
+      if (px !== py) return px - py;
+      return x.short.localeCompare(y.short);
+    });
+    return rows;
+  }
+
+  return { __name: 'MSI_Standings', compute };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rng) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  const QFS = [[0,1],[2,3],[4,5],[6,7]];
+  // Official MSI seeding: quarterfinals pair Pool 1 vs Pool 4 and Pool 2 vs Pool 3.
+  function satisfies(draw, byShort) {
+    return QFS.every(([i, j]) => {
+      const A = byShort[draw[i]], B = byShort[draw[j]];
+      if (!A || !B) return false;
+      const pools = [A.pool, B.pool].sort((x, y) => x - y).join('-');
+      const validPair = pools === '1-4' || pools === '2-3';
+      const diffRegion = A.region !== B.region;
+      return validPair && diffRegion;
+    });
+  }
+  function generate(teams, rng) {
+    const byShort = Object.fromEntries(teams.map(t => [t.short, t]));
+    const byPool = p => teams.filter(t => t.pool === p).map(t => t.short);
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const p1 = shuffle(byPool(1), rng), p2 = shuffle(byPool(2), rng),
+            p3 = shuffle(byPool(3), rng), p4 = shuffle(byPool(4), rng);
+      // QF1: P1 v P4 | QF2: P2 v P3 | QF3: P1 v P4 | QF4: P2 v P3
+      // (the two Pool-1 teams land in opposite halves so they can only meet in the final)
+      const draw = [p1[0], p4[0], p2[0], p3[0], p1[1], p4[1], p2[1], p3[1]];
+      if (satisfies(draw, byShort)) return draw;
+    }
+    throw new Error('could not satisfy draw constraints');
+  }
+  function swap(draw, i, j) {
+    if (!draw) return draw;
+    const d = draw.slice(); const t = d[i]; d[i] = d[j]; d[j] = t; return d;
+  }
+  return { __name: 'MSI_Draw', makeRng, satisfies, generate, swap };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  const KEY = 'msi2026sim';
+  function b64encode(str) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf8').toString('base64');
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64decode(b64) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(b64, 'base64').toString('utf8');
+    return decodeURIComponent(escape(atob(b64)));
+  }
+  function encode(state) { return b64encode(JSON.stringify(state)); }
+  function decode(str) {
+    if (!str) return null;
+    try { const o = JSON.parse(b64decode(str)); return (o && typeof o === 'object') ? o : null; }
+    catch (e) { return null; }
+  }
+  function save(state, storage) { try { storage.setItem(KEY, encode(state)); } catch (e) {} }
+  function load(storage) { try { return decode(storage.getItem(KEY)); } catch (e) { return null; } }
+  return { __name: 'MSI_Persist', KEY, encode, decode, save, load };
+});
+
+</script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback } = React;
+const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MSI_Draw, Persist = MSI_Persist;
+const ALL_TEAMS = DATA.teams.concat(DATA.playInCandidates);
+const teamByShort = Object.fromEntries(ALL_TEAMS.map(t => [t.short, t]));
+
+function TeamLogo({ short }) {
+  const t = teamByShort[short];
+  const [err, setErr] = useState(false);
+  if (!t) return <span className="badge" style={{ background: '#333' }}>?</span>;
+  if (t.logoUrl && !err)
+    return <img className="logo" src={t.logoUrl} alt={t.short} onError={() => setErr(true)} />;
+  return <span className="badge" style={{ background: t.color }}>{t.short.slice(0, 3)}</span>;
+}
+
+function TeamRow({ short, score, isWinner, seedIndex, onSwap }) {
+  const t = short ? teamByShort[short] : null;
+  const droppable = onSwap != null;
+  return (
+    <div className={'row' + (isWinner ? ' winner' : '')}
+      onDragOver={droppable ? e => e.preventDefault() : undefined}
+      onDrop={droppable ? e => {
+        e.preventDefault();
+        const from = parseInt(e.dataTransfer.getData('text/seed'), 10);
+        if (!isNaN(from) && from !== seedIndex) onSwap(from, seedIndex);
+      } : undefined}
+    >
+      {short ? <TeamLogo short={short} /> : <span className="badge" style={{ background: '#222' }}> </span>}
+      <span className={'name' + (t ? '' : ' tbd')}>{t ? (t.short + ' · ' + t.name) : 'TBD'}</span>
+      <span className="score">{short ? score : ''}</span>
+    </div>
+  );
+}
+
+function ChipTray({ draw }) {
+  if (!draw) return null;
+  return (
+    <div className="poolbar">
+      {draw.map((short, i) => {
+        const t = teamByShort[short];
+        // Only append text label when team has a real logo (img), so the badge fallback
+        // (which already prints the short code) doesn't cause "HLE HLE" duplication.
+        const hasLogo = t && t.logoUrl;
+        return (
+          <div className="chip" key={i} draggable
+               onDragStart={e => e.dataTransfer.setData('text/seed', String(i))}>
+            <TeamLogo short={short} />{hasLogo ? <span>{t.short}</span> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, selected }) {
+  const r = Engine.resolveMatch(id, draw, scores);
+  const sc = scores[id] || { a: 0, b: 0 };
+  const live = r.teamA && r.teamB && !r.winner;
+  const revealClass = justDrew && id.startsWith('WQF') ? ' reveal' : '';
+  const isQF = id.startsWith('WQF');
+  const g = isQF ? Engine.GRAPH[id] : null;
+  return (
+    <div className={'match' + (live ? ' live' : '') + (selected ? ' selected' : '') + revealClass} onClick={() => onOpen(id)}>
+      <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA}
+        seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} />
+      <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
+        seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} />
+      <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span className="bo5">BO5</span></div>
+    </div>
+  );
+}
+
+function StandingsTable({ draw, scores }) {
+  if (!draw) return <div className="standings"><div className="section-title">Standings</div><div style={{color:'var(--muted)'}}>Draw teams to begin.</div></div>;
+  const rows = Standings.compute(Engine, draw, scores);
+  return (
+    <div className="standings">
+      <div className="section-title">Standings</div>
+      <table><tbody>
+        {rows.map(r => (
+          <tr key={r.short} className={r.alive ? '' : 'out'}>
+            <td className="pl">{r.placeLabel}</td>
+            <td><TeamLogo short={r.short} /></td>
+            <td>{teamByShort[r.short] ? teamByShort[r.short].name : r.short}</td>
+          </tr>
+        ))}
+      </tbody></table>
+    </div>
+  );
+}
+
+function Stepper({ value, onChange }) {
+  return (
+    <div className="stepper">
+      <button onClick={() => onChange(Math.max(0, value - 1))}>−</button>
+      <span className="score" style={{ fontSize: 18 }}>{value}</span>
+      <button onClick={() => onChange(Math.min(3, value + 1))}>+</button>
+    </div>
+  );
+}
+
+function Drawer({ id, draw, scores, onScore, onClose }) {
+  const isOpen = !!id;
+  const r = isOpen ? Engine.resolveMatch(id, draw, scores) : {};
+  const sc = isOpen ? (scores[id] || { a: 0, b: 0 }) : { a: 0, b: 0 };
+  const setA = v => { if (Engine.isValidBo5(v, sc.b)) onScore(id, v, sc.b); };
+  const setB = v => { if (Engine.isValidBo5(sc.a, v)) onScore(id, sc.a, v); };
+  const nameOf = s => (s ? (teamByShort[s] ? teamByShort[s].name : s) : 'TBD');
+  return (
+    <>
+      <div className={'drawer-backdrop' + (isOpen ? '' : ' hidden')} onClick={onClose} />
+      <div className={'drawer' + (isOpen ? ' open' : '')}>
+        {isOpen && <>
+          <button className="close" onClick={onClose}>×</button>
+          <h2>{id} · BO5</h2>
+          <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
+          <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
+          <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
+          {r.winner && <div className="winner-tag">Winner — {nameOf(r.winner)}</div>}
+          <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
+        </>}
+      </div>
+    </>
+  );
+}
+
+const COLUMNS = [
+  { title: 'Round 1', ids: ['WQF1','WQF2','WQF3','WQF4'] },
+  { title: 'Round 2', ids: ['WSF1','WSF2'] },
+  { title: 'Round 4', ids: ['WBF'] },
+];
+const LB_COLUMNS = [
+  { title: 'LB Round 1', ids: ['LR1A','LR1B'] },
+  { title: 'LB Round 2', ids: ['LR2A','LR2B'] },
+  { title: 'LB Round 3', ids: ['LR3'] },
+  { title: 'LB Final', ids: ['LBF'] },
+];
+
+function BracketView({ draw, scores, onOpen, justDrew, onSwap, openId }) {
+  const col = (c) => (
+    <div className="col" key={c.title}>
+      <h3>{c.title}</h3>
+      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={id === openId} />)}
+    </div>
+  );
+  return (
+    <div className="bracket">
+      <div className="section-title">Winners' Bracket</div>
+      <div className="cols">{COLUMNS.map(col)}
+        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={'GF' === openId} /></div>
+      </div>
+      <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
+      <div className="cols">{LB_COLUMNS.map(col)}</div>
+    </div>
+  );
+}
+
+function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied }) {
+  return (
+    <div className="topbar">
+      <div className="brand">
+        <span className="brand-word">MSI<em>26</em></span>
+        <span className="brand-tag">Stage 2 · Bracket</span>
+      </div>
+      <div className="spacer" />
+      <label className="pick">Play-In Winner
+        <select value={playInPick || ''} onChange={e => onPick(e.target.value || null)}>
+          <option value="">— TBD —</option>
+          {DATA.playInCandidates.map(c => <option key={c.short} value={c.short}>{c.short} · {c.name}</option>)}
+        </select>
+      </label>
+      <button className="btn primary" onClick={onDraw}>↯ Draw</button>
+      <button className="btn" onClick={onCopy}>{copied ? 'Copied ✓' : 'Copy link'}</button>
+      <button className="btn ghost" onClick={onReset}>Reset</button>
+    </div>
+  );
+}
+
+// Apply the play-in pick: substitute the chosen team's identity into the PIW slot for display.
+function applyPlayIn(short) {
+  // returns a function mapping a slot short to display short (PIW -> picked team)
+  return s => (s === 'PIW' && short ? short : s);
+}
+
+function App() {
+  const seedRef = React.useRef(1);
+  const firstSave = React.useRef(true);
+  const [draw, setDraw] = useState(null);
+  const [scores, setScores] = useState(Engine.emptyScores());
+  const [playInPick, setPlayInPick] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [justDrew, setJustDrew] = useState(false);
+
+  // hydrate once: URL hash beats localStorage
+  useEffect(() => {
+    const fromUrl = Persist.decode(location.hash.replace(/^#/, ''));
+    const st = fromUrl || Persist.load(window.localStorage);
+    if (st) { setDraw(st.draw || null); setScores(st.scores || Engine.emptyScores()); setPlayInPick(st.playInPick || null); }
+  }, []);
+
+  // autosave
+  useEffect(() => {
+    if (firstSave.current) { firstSave.current = false; return; }
+    Persist.save({ draw, scores, playInPick }, window.localStorage);
+    if (location.hash) history.replaceState(null, '', location.pathname);
+  }, [draw, scores, playInPick]);
+
+  const doScore = useCallback((id, a, b) => setScores(s => Engine.setScore(s, id, a, b)), []);
+  const doSwap = useCallback((i, j) => setDraw(d => Draw.swap(d, i, j)), []);
+
+  const doDraw = useCallback(() => {
+    const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
+    const d = Draw.generate(DATA.teams, rng);
+    setDraw(d); setScores(Engine.emptyScores());
+    setJustDrew(true); setTimeout(() => setJustDrew(false), 700);
+  }, []);
+  const doReset = useCallback(() => {
+    setDraw(null); setScores(Engine.emptyScores()); setPlayInPick(null);
+    history.replaceState(null, '', location.pathname);
+  }, []);
+  const doCopy = useCallback(() => {
+    const enc = Persist.encode({ draw, scores, playInPick });
+    const url = location.href.split('#')[0] + '#' + enc;
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, done); else done();
+    history.replaceState(null, '', '#' + enc);
+  }, [draw, scores, playInPick]);
+
+  // draw with PIW substituted for display/logic
+  const displayDraw = useMemo(() => draw && draw.map(applyPlayIn(playInPick)), [draw, playInPick]);
+
+  return (
+    <div>
+      <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
+      <ChipTray draw={displayDraw} />
+      <div className="layout">
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} openId={openId} />
+        <StandingsTable draw={displayDraw} scores={scores} />
+      </div>
+      <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>

@@ -443,16 +443,18 @@ test('before any games everyone is alive with no place', () => {
   assert.ok(rows.every(r => r.alive && r.place === null));
 });
 
-test('rows are sorted best place first, unresolved last', () => {
+test('alive teams sort before eliminated; eliminated sink to the bottom with their place', () => {
   let s = E.emptyScores();
   s = E.setScore(s, 'WQF1', 3, 0);
   s = E.setScore(s, 'WQF2', 3, 0);
   s = E.setScore(s, 'LR1A', 3, 0); // PIW eliminated 7th-8th
   const rows = S.compute(E, DRAW, s);
-  assert.equal(rows[rows.length - 1].short, undefined === rows[rows.length-1].short ? rows[rows.length-1].short : rows[rows.length-1].short); // sanity
-  const piw = placeOf(rows, 'PIW');
-  assert.equal(piw.alive, false);
-  assert.equal(piw.place, 7);
+  // 7 teams still alive, PIW eliminated -> PIW is the last row
+  const last = rows[rows.length - 1];
+  assert.equal(last.short, 'PIW');
+  assert.equal(last.alive, false);
+  assert.equal(last.place, 7);
+  assert.ok(rows[0].alive); // a still-competing team leads the table
 });
 ```
 
@@ -500,6 +502,10 @@ Expected: FAIL — `Cannot find module '../src/standings.js'`.
       alive: alive[short] !== false,
     }));
     rows.sort((x, y) => {
+      // Still-competing teams lead the table; eliminated teams sink to the
+      // bottom ordered by finishing place. Once the tournament completes,
+      // every team is eliminated, so this collapses to pure 1st..8th order.
+      if (x.alive !== y.alive) return x.alive ? -1 : 1;
       const px = x.place == null ? 99 : x.place;
       const py = y.place == null ? 99 : y.place;
       if (px !== py) return px - py;
