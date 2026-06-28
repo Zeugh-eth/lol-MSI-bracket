@@ -97,6 +97,7 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
   filter:drop-shadow(3px 3px 0 rgba(0,0,0,.55)); transition:transform .1s}
 .match:hover{transform:translateX(2px)}
 .match:hover .row{background:var(--paper-bright)}
+.match:hover .row.winner{background:var(--red)} /* keep winner red on hover */
 .match.live .row:not(.winner){box-shadow:inset 3px 0 0 var(--red)} /* subtle "playable now" tick */
 .match.selected{outline:3px solid var(--yellow); outline-offset:4px} /* the focused match */
 .row{
@@ -116,31 +117,61 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
 .row .score{font-family:var(--disp); font-size:20px; width:24px; text-align:center;
   color:var(--ink); font-variant-numeric:tabular-nums}
 .row.winner .score{color:var(--paper)}
-.match .meta{display:flex; justify-content:space-between; padding:3px 4px 0;
-  font:700 10px var(--body); letter-spacing:1px; color:var(--muted)}
-.match .meta .bo5{color:var(--red); font-family:var(--disp); letter-spacing:1px}
+.match .meta{display:flex; justify-content:space-between; align-items:center; padding:4px 4px 0;
+  font:700 10px var(--body); letter-spacing:.5px; color:var(--muted)}
+.match .meta .date{color:var(--paper); font-weight:700; font-size:11px; letter-spacing:.3px}
+.match .meta .bo5{color:var(--red); font-family:var(--disp); letter-spacing:1px; font-size:12px}
 .dropslot{outline:2px dashed var(--yellow); outline-offset:-2px}
 
-/* ---------- Standings (paper poster) ---------- */
-.standings{width:300px; flex:0 0 auto; background:var(--paper); color:var(--ink);
+/* ---------- Side column (standings + rules) ---------- */
+.side{width:300px; flex:0 0 auto; display:flex; flex-direction:column; gap:22px}
+.standings{background:var(--paper); color:var(--ink);
   padding:16px 18px 20px; filter:drop-shadow(5px 5px 0 rgba(0,0,0,.5));
   clip-path:polygon(0 1%,100% 0,99.6% 99%,.4% 100%)}
 .standings .section-title{color:var(--ink); font-size:24px; margin:2px 0 16px}
 .standings .section-title::after{background:var(--red)}
-.standings table{width:100%; border-collapse:collapse}
-.standings td{padding:7px 4px; border-bottom:1.5px solid rgba(20,18,16,.14); vertical-align:middle}
-.standings tr:last-child td{border-bottom:none}
-.standings .pl{font-family:var(--disp); font-size:18px; color:var(--red); width:62px; letter-spacing:.5px}
-.standings td .logo{width:22px; height:22px; object-fit:contain; background:var(--paper-bright);
-  border:1.5px solid var(--ink); border-radius:3px; padding:1px; display:block}
-.standings td .badge{width:22px; height:22px; border-radius:3px; display:flex; align-items:center;
+.standings-empty{font:600 13px var(--body); color:#6f6c64}
+/* standings = stacked groups; tied places (5th–6th, 7th–8th) share one cut */
+.stand-group{display:flex; align-items:center; gap:10px; padding:7px 2px;
+  border-bottom:1.5px solid rgba(20,18,16,.14)}
+.stand-group:last-child{border-bottom:none}
+.stand-group .pl{flex:0 0 56px; font-family:var(--disp); font-size:18px; color:var(--red);
+  letter-spacing:.5px; line-height:.95}
+.stand-teams{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px}
+.stand-team{display:flex; align-items:center; gap:9px; min-width:0}
+.stand-team .logo{width:22px; height:22px; flex:0 0 auto; object-fit:contain; background:var(--paper-bright);
+  border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.stand-team .badge{width:22px; height:22px; flex:0 0 auto; border-radius:3px; display:flex; align-items:center;
   justify-content:center; font:800 9px var(--body); color:#fff; border:1.5px solid var(--ink)}
-.standings td:last-child{font:700 13px var(--body)}
-.standings tr.out{opacity:.45}
-.standings tr.out td:last-child{text-decoration:line-through}
+.stand-team .tn{font:700 13px var(--body); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stand-team.out{opacity:.5}
+.stand-team.out .tn{text-decoration:line-through}
+
+/* podium medals — gold / silver / bronze on the bone-paper background */
+.stand-group.gold{background:rgba(184,134,11,.16); box-shadow:inset 4px 0 0 #a87d12; border-bottom-color:transparent}
+.stand-group.silver{background:rgba(110,118,125,.16); box-shadow:inset 4px 0 0 #5d646b; border-bottom-color:transparent}
+.stand-group.bronze{background:rgba(166,94,43,.15); box-shadow:inset 4px 0 0 #9a5526; border-bottom-color:transparent}
+.stand-group.gold .pl{color:#a87d12; font-size:32px}
+.stand-group.silver .pl{color:#5d646b; font-size:27px}
+.stand-group.bronze .pl{color:#9a5526; font-size:24px}
+.stand-group.gold .tn{font-weight:800; font-size:17px; color:#7c5c0c}
+.stand-group.silver .tn{font-weight:800; font-size:15px; color:#474d53}
+.stand-group.bronze .tn{font-weight:800; font-size:15px; color:#7a4220}
+.stand-group.gold .logo, .stand-group.silver .logo, .stand-group.bronze .logo{width:26px; height:26px}
+
+/* ---------- Rules / format poster ---------- */
+.rules .section-title{font-size:22px}
+.rules-list{margin:0; padding:0; list-style:none; font:600 13px/1.5 var(--body); color:var(--ink)}
+.rules-list li{position:relative; padding:7px 4px 7px 20px; border-bottom:1.5px solid rgba(20,18,16,.12)}
+.rules-list li:last-child{border-bottom:none}
+.rules-list li::before{content:''; position:absolute; left:2px; top:13px; width:9px; height:9px;
+  background:var(--red); transform:skewX(-10deg)}
+.rules-list b{font-weight:800}
 
 /* ---------- Chip tray (red painted team chips) ---------- */
-.poolbar{display:flex; gap:10px; flex-wrap:wrap; padding:4px 22px 0}
+.poolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:4px 22px 0}
+.bench-label{font-family:var(--disp); text-transform:uppercase; letter-spacing:1px; font-size:12px;
+  color:var(--yellow); margin-right:4px}
 .chip{display:flex; align-items:center; gap:7px; background:var(--red); color:var(--paper);
   border:2px solid var(--ink); padding:4px 12px 4px 5px; cursor:grab;
   font-family:var(--disp); letter-spacing:1px; font-size:13px; text-transform:uppercase;
@@ -168,6 +199,7 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
   transform:translateX(100%); transition:transform .22s ease; z-index:40; padding:22px; overflow-y:auto}
 .drawer.open{transform:translateX(0)}
 .drawer h2{font-family:var(--disp); font-size:26px; letter-spacing:1px; text-transform:uppercase; margin:0 4px 2px 0}
+.drawer-date{font:700 13px var(--body); color:var(--yellow); letter-spacing:.3px; margin-bottom:6px}
 .drawer .close{position:absolute; top:14px; right:14px; cursor:pointer; color:var(--paper);
   background:none; border:none; font-size:26px; line-height:1; font-family:var(--disp)}
 .scorebox{display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -186,6 +218,32 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
   font-size:18px; color:var(--yellow); margin-top:6px}
 .h2h{margin-top:20px; padding:16px; border:2px dashed var(--line); color:var(--muted);
   text-align:center; font-family:var(--disp); letter-spacing:1px; text-transform:uppercase; font-size:13px}
+/* head-to-head panel */
+.h2h-real{margin-top:20px; border-top:2px solid var(--line); padding-top:14px}
+.h2h-title{font-family:var(--disp); text-transform:uppercase; letter-spacing:1px; font-size:16px; color:var(--paper)}
+.h2h-subtitle{font:700 10px var(--body); letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin:10px 0 6px}
+.h2h-tally{display:flex; align-items:center; gap:12px; margin-top:10px}
+.h2h-tally .side{flex:1 1 0; min-width:0; display:flex; align-items:center; gap:6px;
+  font-family:var(--disp); letter-spacing:.5px; font-size:15px; color:var(--paper)}
+.h2h-tally .side:last-child{flex-direction:row-reverse}
+.h2h-tally .side .logo{width:24px; height:24px; flex:0 0 auto; object-fit:contain; background:var(--paper-bright); border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.h2h-tally .count{flex:0 0 auto; font-family:var(--disp); font-size:24px; color:var(--yellow); white-space:nowrap}
+.h2h-tally .count i{font-style:normal; color:var(--muted); margin:0 4px}
+.h2h-list, .h2h-form{display:flex; flex-direction:column; gap:0}
+.h2h-form{margin-bottom:12px}
+.h2h-form-team{display:flex; align-items:center; gap:6px; font-family:var(--disp); letter-spacing:.5px; font-size:13px; color:var(--paper); margin-bottom:4px}
+.h2h-form-team .logo{width:18px; height:18px; object-fit:contain; background:var(--paper-bright); border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.h2h-row{display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid rgba(236,234,227,.1); font:600 12px var(--body)}
+.h2h-row:last-child{border-bottom:none}
+.h2h-row .dt{color:var(--muted); font-variant-numeric:tabular-nums; width:78px; flex:0 0 auto; font-size:11px}
+.h2h-row .sc{font-family:var(--disp); font-size:14px; width:38px; flex:0 0 auto; text-align:center}
+.h2h-row .sc.aw{color:var(--win)} .h2h-row .sc.bw{color:var(--paper)}
+.h2h-row .res{font-family:var(--disp); width:16px; flex:0 0 auto; text-align:center}
+.h2h-row .res.w{color:var(--win)} .h2h-row .res.l{color:var(--muted)}
+.h2h-row .opp{flex:1.3 1 0; min-width:0; color:var(--paper); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.h2h-row .ev{flex:1 1 0; min-width:0; color:var(--muted); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:11px}
+.h2h-row .ev.intl{color:var(--red); font-weight:700}
+.h2h-row .none{color:var(--muted); font-style:italic}
 .drawer-backdrop{position:fixed; inset:0; background:rgba(10,9,8,.6); z-index:35; transition:opacity .2s}
 .drawer-backdrop.hidden{opacity:0; pointer-events:none}
 

@@ -49,5 +49,14 @@
     if (!draw) return draw;
     const d = draw.slice(); const t = d[i]; d[i] = d[j]; d[j] = t; return d;
   }
-  return { __name: 'MSI_Draw', makeRng, satisfies, generate, swap };
+  // Place a team into slot i, starting from an empty 8-slot bracket if needed.
+  // If the team already sits in another slot, it moves (its old slot is cleared).
+  function place(draw, i, team) {
+    const d = draw ? draw.slice() : new Array(8).fill(null);
+    const at = d.indexOf(team);
+    if (at >= 0) d[at] = null;
+    d[i] = team;
+    return d;
+  }
+  return { __name: 'MSI_Draw', makeRng, satisfies, generate, swap, place };
 });
