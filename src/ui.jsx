@@ -2,6 +2,12 @@ const { useState, useEffect, useMemo, useCallback } = React;
 const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MSI_Draw, Persist = MSI_Persist, H2H = MSI_H2H;
 const ALL_TEAMS = DATA.teams.concat(DATA.playInCandidates);
 const teamByShort = Object.fromEntries(ALL_TEAMS.map(t => [t.short, t]));
+// Canonical orders for the compact share link (must stay stable across versions).
+const SHARE_SCHEMA = {
+  teams: DATA.teams.map(t => t.short),
+  candidates: DATA.playInCandidates.map(c => c.short),
+  matchIds: DATA.matchIds,
+};
 
 // Date display: "2026-07-01" -> "July 1st, Wednesday"
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -320,7 +326,7 @@ function App() {
 
   // hydrate once: URL hash beats localStorage
   useEffect(() => {
-    const fromUrl = Persist.decode(location.hash.replace(/^#/, ''));
+    const fromUrl = Persist.decodeShare(location.hash.replace(/^#/, ''), SHARE_SCHEMA);
     const st = fromUrl || Persist.load(window.localStorage);
     if (st) { setDraw(st.draw || null); setScores(st.scores || Engine.emptyScores()); setPlayInPick(st.playInPick || null); }
   }, []);
@@ -348,7 +354,7 @@ function App() {
     history.replaceState(null, '', location.pathname);
   }, []);
   const doCopy = useCallback(() => {
-    const enc = Persist.encode({ draw, scores, playInPick });
+    const enc = Persist.encodeShare({ draw, scores, playInPick }, SHARE_SCHEMA);
     const url = location.href.split('#')[0] + '#' + enc;
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, done); else done();
