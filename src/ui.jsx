@@ -93,6 +93,7 @@ function applyPlayIn(short) {
 
 function App() {
   const seedRef = React.useRef(1);
+  const firstSave = React.useRef(true);
   const [draw, setDraw] = useState(null);
   const [scores, setScores] = useState(Engine.emptyScores());
   const [playInPick, setPlayInPick] = useState(null);
@@ -108,6 +109,7 @@ function App() {
 
   // autosave
   useEffect(() => {
+    if (firstSave.current) { firstSave.current = false; return; }
     Persist.save({ draw, scores, playInPick }, window.localStorage);
   }, [draw, scores, playInPick]);
 
@@ -122,7 +124,7 @@ function App() {
   }, []);
   const doCopy = useCallback(() => {
     const enc = Persist.encode({ draw, scores, playInPick });
-    const url = location.origin + location.pathname + '#' + enc;
+    const url = location.href.split('#')[0] + '#' + enc;
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, done); else done();
     history.replaceState(null, '', '#' + enc);
