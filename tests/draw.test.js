@@ -33,3 +33,10 @@ test('satisfies rejects two high-pool teams in one QF', () => {
   const bad = ['BLG','G2','TES','PIW','HLE','LYON','TSTW','FURIA'];
   assert.equal(D.satisfies(bad, byShort), false); // BLG(1) vs G2(1)
 });
+
+test('swap exchanges two positions and preserves the set', () => {
+  const before = ['BLG','TES','G2','PIW','HLE','FURIA','LYON','TSTW'];
+  const after = D.swap(before, 0, 6);
+  assert.equal(after[0], 'LYON'); assert.equal(after[6], 'BLG');
+  assert.deepEqual([...after].sort(), [...before].sort());
+});

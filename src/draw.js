@@ -41,5 +41,9 @@
     }
     throw new Error('could not satisfy draw constraints');
   }
-  return { __name: 'MSI_Draw', makeRng, satisfies, generate };
+  function swap(draw, i, j) {
+    if (!draw) return draw;
+    const d = draw.slice(); const t = d[i]; d[i] = d[j]; d[j] = t; return d;
+  }
+  return { __name: 'MSI_Draw', makeRng, satisfies, generate, swap };
 });

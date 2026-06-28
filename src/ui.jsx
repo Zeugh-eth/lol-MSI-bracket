@@ -12,10 +12,18 @@ function TeamLogo({ short }) {
   return <span className="badge" style={{ background: t.color }}>{t.short.slice(0, 3)}</span>;
 }
 
-function TeamRow({ short, score, isWinner }) {
+function TeamRow({ short, score, isWinner, seedIndex, onSwap }) {
   const t = short ? teamByShort[short] : null;
+  const droppable = onSwap != null;
   return (
-    <div className={'row' + (isWinner ? ' winner' : '')}>
+    <div className={'row' + (isWinner ? ' winner' : '')}
+      onDragOver={droppable ? e => e.preventDefault() : undefined}
+      onDrop={droppable ? e => {
+        e.preventDefault();
+        const from = parseInt(e.dataTransfer.getData('text/seed'), 10);
+        if (!isNaN(from) && from !== seedIndex) onSwap(from, seedIndex);
+      } : undefined}
+    >
       {short ? <TeamLogo short={short} /> : <span className="badge" style={{ background: '#222' }}> </span>}
       <span className={'name' + (t ? '' : ' tbd')}>{t ? (t.short + ' · ' + t.name) : 'TBD'}</span>
       <span className="score">{short ? score : ''}</span>
@@ -23,15 +31,33 @@ function TeamRow({ short, score, isWinner }) {
   );
 }
 
-function MatchCard({ id, draw, scores, onOpen, justDrew }) {
+function ChipTray({ draw }) {
+  if (!draw) return null;
+  return (
+    <div className="poolbar">
+      {draw.map((short, i) => (
+        <div className="chip" key={i} draggable
+             onDragStart={e => e.dataTransfer.setData('text/seed', String(i))}>
+          <TeamLogo short={short} /> {teamByShort[short] ? teamByShort[short].short : short}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap }) {
   const r = Engine.resolveMatch(id, draw, scores);
   const sc = scores[id] || { a: 0, b: 0 };
   const live = r.teamA && r.teamB && !r.winner;
   const revealClass = justDrew && id.startsWith('WQF') ? ' reveal' : '';
+  const isQF = id.startsWith('WQF');
+  const g = isQF ? Engine.GRAPH[id] : null;
   return (
     <div className={'match' + (live ? ' live' : '') + revealClass} onClick={() => onOpen(id)}>
-      <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA} />
-      <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB} />
+      <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA}
+        seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} />
+      <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
+        seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} />
       <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span>BO5</span></div>
     </div>
   );
@@ -98,18 +124,18 @@ const LB_COLUMNS = [
   { title: 'LB Final', ids: ['LBF'] },
 ];
 
-function BracketView({ draw, scores, onOpen, justDrew }) {
+function BracketView({ draw, scores, onOpen, justDrew, onSwap }) {
   const col = (c) => (
     <div className="col" key={c.title}>
       <h3>{c.title}</h3>
-      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} />)}
+      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} />)}
     </div>
   );
   return (
     <div className="bracket">
       <div className="section-title">Winners' Bracket</div>
       <div className="cols">{COLUMNS.map(col)}
-        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} /></div>
+        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} /></div>
       </div>
       <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
       <div className="cols">{LB_COLUMNS.map(col)}</div>
@@ -165,6 +191,7 @@ function App() {
   }, [draw, scores, playInPick]);
 
   const doScore = useCallback((id, a, b) => setScores(s => Engine.setScore(s, id, a, b)), []);
+  const doSwap = useCallback((i, j) => setDraw(d => Draw.swap(d, i, j)), []);
 
   const doDraw = useCallback(() => {
     const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
@@ -190,8 +217,9 @@ function App() {
   return (
     <div>
       <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
+      <ChipTray draw={displayDraw} />
       <div className="layout">
-        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} />
         <StandingsTable draw={displayDraw} scores={scores} />
       </div>
       <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
