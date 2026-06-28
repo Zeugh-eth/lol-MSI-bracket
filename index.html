@@ -340,6 +340,36 @@ function MatchCard({ id, draw, scores, onOpen }) {
   );
 }
 
+function Stepper({ value, onChange }) {
+  return (
+    <div className="stepper">
+      <button onClick={() => onChange(Math.max(0, value - 1))}>−</button>
+      <span className="score" style={{ fontSize: 18 }}>{value}</span>
+      <button onClick={() => onChange(Math.min(3, value + 1))}>+</button>
+    </div>
+  );
+}
+
+function Drawer({ id, draw, scores, onScore, onClose }) {
+  if (!id) return <div className="drawer" />;
+  const r = Engine.resolveMatch(id, draw, scores);
+  const sc = scores[id] || { a: 0, b: 0 };
+  const setA = v => { if (Engine.isValidBo5(v, sc.b)) onScore(id, v, sc.b); };
+  const setB = v => { if (Engine.isValidBo5(sc.a, v)) onScore(id, sc.a, v); };
+  const nameOf = s => (s ? (teamByShort[s] ? teamByShort[s].name : s) : 'TBD');
+  return (
+    <div className="drawer open">
+      <button className="close" onClick={onClose}>×</button>
+      <h2>{id} · BO5</h2>
+      <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
+      <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
+      <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
+      {r.winner && <div style={{ color: 'var(--win)', fontWeight: 700 }}>Winner: {nameOf(r.winner)}</div>}
+      <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
+    </div>
+  );
+}
+
 const COLUMNS = [
   { title: 'Round 1', ids: ['WQF1','WQF2','WQF3','WQF4'] },
   { title: 'Round 2', ids: ['WSF1','WSF2'] },
@@ -417,6 +447,8 @@ function App() {
     Persist.save({ draw, scores, playInPick }, window.localStorage);
   }, [draw, scores, playInPick]);
 
+  const doScore = useCallback((id, a, b) => setScores(s => Engine.setScore(s, id, a, b)), []);
+
   const doDraw = useCallback(() => {
     const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
     const d = Draw.generate(DATA.teams, rng);
@@ -443,6 +475,7 @@ function App() {
       <div className="layout">
         <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} />
       </div>
+      <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
     </div>
   );
 }
