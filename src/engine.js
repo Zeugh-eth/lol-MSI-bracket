@@ -34,7 +34,7 @@
   }
 
   function resolveSource(src, draw, scores) {
-    if ('seed' in src) return draw && draw[src.seed] ? draw[src.seed] : null;
+    if ('seed' in src) return draw ? (draw[src.seed] ?? null) : null;
     const r = resolveMatch(src.winner || src.loser, draw, scores);
     if ('winner' in src) return r.winner;
     return r.loser;

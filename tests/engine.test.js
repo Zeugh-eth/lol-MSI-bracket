@@ -6,8 +6,7 @@ const DRAW = ['BLG','TES','G2','PIW','HLE','FURIA','LYON','TSTW']; // positions 
 
 test('graph has 14 matches with rounds', () => {
   assert.equal(Object.keys(E.GRAPH).length, 14);
-  for (const id of ['WQF1','WSF1','WBF','LR1A','LR2A','LR3','LBF','GF'])
-    assert.ok(E.GRAPH[id].round >= 1, id);
+  for (const id of Object.keys(E.GRAPH)) assert.ok(E.GRAPH[id].round >= 1, id);
 });
 
 test('QF teams come straight from the draw', () => {
@@ -55,6 +54,7 @@ test('changing an upstream result clears downstream scores', () => {
   s = E.setScore(s, 'WSF1', 3, 0); // depends on WQF1 & WQF2
   s = E.setScore(s, 'WQF1', 0, 3); // flip QF1 -> WSF1 must reset
   assert.deepEqual(s.WSF1, { a: 0, b: 0 });
+  assert.deepEqual(s.WQF2, { a: 3, b: 0 }); // unrelated match must remain intact
 });
 
 test('isValidBo5 rejects impossible scores', () => {
