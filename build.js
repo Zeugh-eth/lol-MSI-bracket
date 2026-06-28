@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const read = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
 
-const logic = ['src/data.js','src/engine.js','src/standings.js','src/draw.js','src/persist.js']
+const logic = ['src/data.js','src/engine.js','src/standings.js','src/draw.js','src/persist.js','src/h2h.js']
   .map(read).join('\n\n');
 const ui = read('src/ui.jsx');
 

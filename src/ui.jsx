@@ -1,5 +1,5 @@
 const { useState, useEffect, useMemo, useCallback } = React;
-const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MSI_Draw, Persist = MSI_Persist;
+const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MSI_Draw, Persist = MSI_Persist, H2H = MSI_H2H;
 const ALL_TEAMS = DATA.teams.concat(DATA.playInCandidates);
 const teamByShort = Object.fromEntries(ALL_TEAMS.map(t => [t.short, t]));
 
@@ -160,6 +160,56 @@ function Stepper({ value, onChange }) {
   );
 }
 
+function H2HPanel({ a, b }) {
+  const nm = s => (teamByShort[s] ? teamByShort[s].short : s);
+  if (!a || !b) return <div className="h2h">Head-to-head<br /><small>set both teams</small></div>;
+  if (a === 'PIW' || b === 'PIW') return <div className="h2h">Head-to-head<br /><small>Play-In winner TBD</small></div>;
+  const sum = H2H.summary(a, b);
+  if (sum.count === 0) {
+    return (
+      <div className="h2h-real">
+        <div className="h2h-title">No prior meetings</div>
+        <div className="h2h-subtitle">Latest results</div>
+        {[a, b].map(tm => (
+          <div className="h2h-form" key={tm}>
+            <div className="h2h-form-team"><TeamLogo short={tm} /> {nm(tm)}</div>
+            {H2H.recent(tm, 3).length === 0
+              ? <div className="h2h-row"><span className="none">No recent matches on record</span></div>
+              : H2H.recent(tm, 3).map((m, i) => (
+                <div className="h2h-row" key={i}>
+                  <span className={'res ' + (m.self > m.os ? 'w' : 'l')}>{m.self > m.os ? 'W' : 'L'}</span>
+                  <span className="sc">{m.self}–{m.os}</span>
+                  <span className="opp">{nm(m.opp)}</span>
+                  <span className={'ev' + (m.i ? ' intl' : '')}>{m.ev}</span>
+                </div>
+              ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="h2h-real">
+      <div className="h2h-title">Head-to-head</div>
+      <div className="h2h-tally">
+        <span className="side"><TeamLogo short={a} /> {nm(a)}</span>
+        <b className="count">{sum.aWins}<i>–</i>{sum.bWins}</b>
+        <span className="side">{nm(b)} <TeamLogo short={b} /></span>
+      </div>
+      <div className="h2h-subtitle">{sum.count} meeting{sum.count > 1 ? 's' : ''} · most recent</div>
+      <div className="h2h-list">
+        {sum.matches.slice(0, 7).map((m, i) => (
+          <div className="h2h-row" key={i}>
+            <span className="dt">{m.d}</span>
+            <span className={'sc ' + (m.sa > m.sb ? 'aw' : 'bw')}>{m.sa}–{m.sb}</span>
+            <span className={'ev' + (m.i ? ' intl' : '')}>{m.ev}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Drawer({ id, draw, scores, onScore, onClose }) {
   const isOpen = !!id;
   const r = isOpen ? Engine.resolveMatch(id, draw, scores) : {};
@@ -178,7 +228,7 @@ function Drawer({ id, draw, scores, onScore, onClose }) {
           <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
           <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
           {r.winner && <div className="winner-tag">Winner — {nameOf(r.winner)}</div>}
-          <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
+          <H2HPanel a={r.teamA} b={r.teamB} />
         </>}
       </div>
     </>
