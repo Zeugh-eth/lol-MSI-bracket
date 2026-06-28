@@ -3,6 +3,20 @@ const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MS
 const ALL_TEAMS = DATA.teams.concat(DATA.playInCandidates);
 const teamByShort = Object.fromEntries(ALL_TEAMS.map(t => [t.short, t]));
 
+// Date display: "2026-07-01" -> "July 1st, Wednesday"
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function ordinal(n) {
+  const v = n % 100, s = ['th','st','nd','rd'];
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function fmtDate(iso) {
+  if (!iso) return 'Date TBD';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return iso;
+  return MONTHS[d.getMonth()] + ' ' + ordinal(d.getDate()) + ', ' + WEEKDAYS[d.getDay()];
+}
+
 function TeamLogo({ short }) {
   const t = teamByShort[short];
   const [err, setErr] = useState(false);
@@ -64,26 +78,49 @@ function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, selected }) {
         seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} />
       <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
         seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} />
-      <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span className="bo5">BO5</span></div>
+      <div className="meta"><span className="date">{fmtDate(DATA.dates[id])}</span><span className="bo5">BO5</span></div>
     </div>
   );
 }
 
+const MEDAL = { 1: 'gold', 2: 'silver', 3: 'bronze' };
 function StandingsTable({ draw, scores }) {
-  if (!draw) return <div className="standings"><div className="section-title">Standings</div><div style={{color:'var(--muted)'}}>Draw teams to begin.</div></div>;
+  if (!draw) return <div className="standings"><div className="section-title">Standings</div><div className="standings-empty">Draw teams to begin.</div></div>;
   const rows = Standings.compute(Engine, draw, scores);
   return (
     <div className="standings">
       <div className="section-title">Standings</div>
       <table><tbody>
-        {rows.map(r => (
-          <tr key={r.short} className={r.alive ? '' : 'out'}>
-            <td className="pl">{r.placeLabel}</td>
-            <td><TeamLogo short={r.short} /></td>
-            <td>{teamByShort[r.short] ? teamByShort[r.short].name : r.short}</td>
-          </tr>
-        ))}
+        {rows.map(r => {
+          // Decided top-3 get a medal class (and are NOT shown as eliminated);
+          // other eliminated teams are muted/struck; still-alive teams are normal.
+          const medal = (!r.alive && MEDAL[r.place]) ? MEDAL[r.place] : '';
+          const cls = medal || (!r.alive ? 'out' : '');
+          return (
+            <tr key={r.short} className={cls}>
+              <td className="pl">{r.placeLabel}</td>
+              <td><TeamLogo short={r.short} /></td>
+              <td>{teamByShort[r.short] ? teamByShort[r.short].name : r.short}</td>
+            </tr>
+          );
+        })}
       </tbody></table>
+    </div>
+  );
+}
+
+function RulesBox() {
+  return (
+    <div className="standings rules">
+      <div className="section-title">Format</div>
+      <ul className="rules-list">
+        <li><b>8 teams</b>, single bracket, <b>double elimination</b></li>
+        <li>Every match is a <b>Best of 5</b></li>
+        <li>Lose once → you drop to the <b>Losers' Bracket</b></li>
+        <li>Lose <b>twice</b> → you're eliminated</li>
+        <li>Quarterfinals seed <b>Pool 1 v 4</b> and <b>Pool 2 v 3</b></li>
+        <li>The <b>champion</b> qualifies for Worlds 2026</li>
+      </ul>
     </div>
   );
 }
@@ -112,7 +149,7 @@ function Drawer({ id, draw, scores, onScore, onClose }) {
         {isOpen && <>
           <button className="close" onClick={onClose}>×</button>
           <h2>{id} · BO5</h2>
-          <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
+          <div className="drawer-date">{fmtDate(DATA.dates[id])}</div>
           <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
           <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
           {r.winner && <div className="winner-tag">Winner — {nameOf(r.winner)}</div>}
@@ -235,7 +272,10 @@ function App() {
       <ChipTray draw={displayDraw} />
       <div className="layout">
         <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} openId={openId} />
-        <StandingsTable draw={displayDraw} scores={scores} />
+        <div className="side">
+          <StandingsTable draw={displayDraw} scores={scores} />
+          <RulesBox />
+        </div>
       </div>
       <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
     </div>
