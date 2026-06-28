@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!-- Social/OG preview hero. Rendered to /og.png at 1200x630 via scripts/make-og.cjs -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--paper:#ECEAE3;--paper-bright:#fbfaf6;--ink:#141210;--red:#E8462E;--yellow:#F2E84B;}
+  *{margin:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{background:var(--paper); font-family:'Archivo',sans-serif; position:relative}
+  /* red ink-splatter blob, top-right */
+  .splat{position:absolute; right:-160px; top:-220px; width:720px; height:720px;
+    background:radial-gradient(circle at 50% 50%, var(--red) 0 38%, transparent 60%);
+    filter:blur(2px); opacity:.92;
+    clip-path:polygon(50% 0,61% 22%,86% 13%,74% 38%,99% 44%,75% 56%,90% 80%,63% 70%,55% 99%,44% 71%,17% 84%,30% 57%,3% 49%,29% 40%,14% 15%,42% 24%)}
+  .grain{position:absolute; inset:0; opacity:.06; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{position:absolute; inset:0; padding:64px 70px; display:flex; flex-direction:column; justify-content:space-between}
+  .brand{font-family:'Anton'; text-transform:uppercase; letter-spacing:1px; color:var(--ink); font-size:30px}
+  .brand em{font-style:normal; color:var(--red)}
+  .brand span{font-size:18px; letter-spacing:4px; opacity:.6; margin-left:14px}
+  .hero{font-family:'Anton'; text-transform:uppercase; color:var(--ink); line-height:.86; font-size:188px; letter-spacing:-2px}
+  .hero .now{color:var(--red); position:relative; display:inline-block}
+  .hero .now::after{content:''; position:absolute; left:-6px; right:-10px; bottom:18px; height:34px;
+    background:var(--yellow); transform:skewX(-11deg); clip-path:polygon(0 35%,98% 0,100% 72%,2% 100%); z-index:-1; mix-blend-mode:multiply}
+  .sub{font-family:'Archivo'; font-weight:800; color:var(--ink); font-size:38px; margin-top:18px; letter-spacing:.3px}
+  .sub b{color:var(--red)}
+  .footer{display:flex; align-items:center; justify-content:space-between}
+  .logos{display:flex; gap:14px}
+  .logos img{width:64px; height:64px; object-fit:contain; background:var(--paper-bright);
+    border:2px solid var(--ink); border-radius:8px; padding:5px}
+  .url{font-family:'Anton'; text-transform:uppercase; letter-spacing:1px; color:var(--ink); font-size:30px}
+  .url i{font-style:normal; color:var(--red)}
+</style>
+</head>
+<body>
+  <div class="splat"></div>
+  <div class="grain"></div>
+  <div class="wrap">
+    <div class="brand">MSI<em>26</em><span>STAGE 2 · DOUBLE ELIMINATION</span></div>
+    <div>
+      <div class="hero">MSI is<br /><span class="now">Now</span></div>
+      <div class="sub">Check the teams. <b>Discover the brackets.</b></div>
+    </div>
+    <div class="footer">
+      <div class="logos">
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/9/91/Bilibili_Gaminglogo_square.png/revision/latest?cb=20260109092043" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/7/77/G2_Esportslogo_square.png/revision/latest?cb=20210810013355" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/a/a6/Hanwha_Life_Esportslogo_square.png/revision/latest?cb=20211024145058" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/4/46/Top_Esportslogo_square.png/revision/latest?cb=20260109111428" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/f/f2/FURIAlogo_square.png/revision/latest?cb=20211007041545" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/5/54/LYON_%282024_American_Team%29logo_square.png/revision/latest?cb=20250109185221" />
+        <img src="https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/a/ac/Team_Secret_Whaleslogo_square.png/revision/latest?cb=20260330071358" />
+      </div>
+      <div class="url">msibracket<i>.xyz</i></div>
+    </div>
+  </div>
+</body>
+</html>
