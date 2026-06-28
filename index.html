@@ -327,15 +327,35 @@ function TeamRow({ short, score, isWinner }) {
   );
 }
 
-function MatchCard({ id, draw, scores, onOpen }) {
+function MatchCard({ id, draw, scores, onOpen, justDrew }) {
   const r = Engine.resolveMatch(id, draw, scores);
   const sc = scores[id] || { a: 0, b: 0 };
   const live = r.teamA && r.teamB && !r.winner;
+  const revealClass = justDrew && id.startsWith('WQF') ? ' reveal' : '';
   return (
-    <div className={'match' + (live ? ' live' : '')} onClick={() => onOpen(id)}>
+    <div className={'match' + (live ? ' live' : '') + revealClass} onClick={() => onOpen(id)}>
       <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA} />
       <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB} />
       <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span>BO5</span></div>
+    </div>
+  );
+}
+
+function StandingsTable({ draw, scores }) {
+  if (!draw) return <div className="standings"><div className="section-title">Standings</div><div style={{color:'var(--muted)'}}>Draw teams to begin.</div></div>;
+  const rows = Standings.compute(Engine, draw, scores);
+  return (
+    <div className="standings">
+      <div className="section-title">Standings</div>
+      <table><tbody>
+        {rows.map(r => (
+          <tr key={r.short} className={r.alive ? '' : 'out'}>
+            <td className="pl">{r.placeLabel}</td>
+            <td><TeamLogo short={r.short} /></td>
+            <td>{teamByShort[r.short] ? teamByShort[r.short].name : r.short}</td>
+          </tr>
+        ))}
+      </tbody></table>
     </div>
   );
 }
@@ -382,18 +402,18 @@ const LB_COLUMNS = [
   { title: 'LB Final', ids: ['LBF'] },
 ];
 
-function BracketView({ draw, scores, onOpen }) {
+function BracketView({ draw, scores, onOpen, justDrew }) {
   const col = (c) => (
     <div className="col" key={c.title}>
       <h3>{c.title}</h3>
-      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} />)}
+      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} />)}
     </div>
   );
   return (
     <div className="bracket">
       <div className="section-title">Winners' Bracket</div>
       <div className="cols">{COLUMNS.map(col)}
-        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} /></div>
+        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} /></div>
       </div>
       <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
       <div className="cols">{LB_COLUMNS.map(col)}</div>
@@ -433,6 +453,7 @@ function App() {
   const [playInPick, setPlayInPick] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [justDrew, setJustDrew] = useState(false);
 
   // hydrate once: URL hash beats localStorage
   useEffect(() => {
@@ -453,6 +474,7 @@ function App() {
     const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
     const d = Draw.generate(DATA.teams, rng);
     setDraw(d); setScores(Engine.emptyScores());
+    setJustDrew(true); setTimeout(() => setJustDrew(false), 700);
   }, []);
   const doReset = useCallback(() => {
     setDraw(null); setScores(Engine.emptyScores()); setPlayInPick(null);
@@ -473,7 +495,8 @@ function App() {
     <div>
       <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
       <div className="layout">
-        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} />
+        <StandingsTable draw={displayDraw} scores={scores} />
       </div>
       <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
     </div>
