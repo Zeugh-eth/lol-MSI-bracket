@@ -58,3 +58,25 @@ test('swap exchanges two positions and preserves the set', () => {
   assert.equal(after[0], 'LYON'); assert.equal(after[6], 'BLG');
   assert.deepEqual([...after].sort(), [...before].sort());
 });
+
+test('place from a null draw starts an empty 8-slot array', () => {
+  const d = D.place(null, 5, 'G2');
+  assert.equal(d.length, 8);
+  assert.equal(d[5], 'G2');
+  assert.equal(d.filter(Boolean).length, 1);
+});
+
+test('place moves a team that was already placed (no duplicates)', () => {
+  let d = D.place(null, 0, 'BLG');
+  d = D.place(d, 3, 'BLG'); // move BLG from slot 0 to slot 3
+  assert.equal(d[0], null);
+  assert.equal(d[3], 'BLG');
+  assert.equal(d.filter(x => x === 'BLG').length, 1);
+});
+
+test('place overwrites the target slot (prior occupant returns to bench)', () => {
+  let d = D.place(null, 2, 'TES');
+  d = D.place(d, 2, 'HLE'); // drop HLE onto TES's slot
+  assert.equal(d[2], 'HLE');
+  assert.ok(!d.includes('TES')); // TES no longer placed
+});

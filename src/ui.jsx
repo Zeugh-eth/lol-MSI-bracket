@@ -26,17 +26,23 @@ function TeamLogo({ short }) {
   return <span className="badge" style={{ background: t.color }}>{t.short.slice(0, 3)}</span>;
 }
 
-function TeamRow({ short, score, isWinner, seedIndex, onSwap }) {
+function TeamRow({ short, score, isWinner, seedIndex, onSwap, onPlace, onDoubleClick }) {
   const t = short ? teamByShort[short] : null;
-  const droppable = onSwap != null;
+  const slot = seedIndex != null; // QF rows are the seed slots (drag source + drop target)
   return (
     <div className={'row' + (isWinner ? ' winner' : '')}
-      onDragOver={droppable ? e => e.preventDefault() : undefined}
-      onDrop={droppable ? e => {
+      draggable={slot && !!short}
+      onDragStart={slot && short ? e => e.dataTransfer.setData('text/seed', String(seedIndex)) : undefined}
+      onDragOver={slot ? e => e.preventDefault() : undefined}
+      onDrop={slot ? e => {
         e.preventDefault();
+        const team = e.dataTransfer.getData('text/team');
+        if (team) { if (onPlace) onPlace(team, seedIndex); return; }
         const from = parseInt(e.dataTransfer.getData('text/seed'), 10);
-        if (!isNaN(from) && from !== seedIndex) onSwap(from, seedIndex);
+        if (!isNaN(from) && from !== seedIndex && onSwap) onSwap(from, seedIndex);
       } : undefined}
+      onDoubleClick={onDoubleClick}
+      title={onDoubleClick ? 'Double-click to set this team as a 3–0 winner' : undefined}
     >
       {short ? <TeamLogo short={short} /> : <span className="badge" style={{ background: '#222' }}> </span>}
       <span className={'name' + (t ? '' : ' tbd')}>{t ? (t.short + ' · ' + t.name) : 'TBD'}</span>
@@ -45,19 +51,24 @@ function TeamRow({ short, score, isWinner, seedIndex, onSwap }) {
   );
 }
 
-function ChipTray({ draw }) {
-  if (!draw) return null;
+// Bench of teams not yet placed in the bracket. Drag one onto a quarterfinal
+// slot to seed it manually — no draw required. Carries the RAW short (e.g. 'PIW').
+function ChipTray({ draw, playInPick }) {
+  const placed = new Set((draw || []).filter(Boolean));
+  const bench = DATA.teams.map(t => t.short).filter(s => !placed.has(s));
+  if (bench.length === 0) return null;
+  const disp = applyPlayIn(playInPick);
   return (
     <div className="poolbar">
-      {draw.map((short, i) => {
-        const t = teamByShort[short];
-        // Only append text label when team has a real logo (img), so the badge fallback
-        // (which already prints the short code) doesn't cause "HLE HLE" duplication.
-        const hasLogo = t && t.logoUrl;
+      <span className="bench-label">Drag teams into the bracket ↴</span>
+      {bench.map(short => {
+        const shown = disp(short);
+        const t = teamByShort[shown];
+        const hasLogo = t && t.logoUrl; // avoid "PIW PIW" when a badge already prints the code
         return (
-          <div className="chip" key={i} draggable
-               onDragStart={e => e.dataTransfer.setData('text/seed', String(i))}>
-            <TeamLogo short={short} />{hasLogo ? <span>{t.short}</span> : null}
+          <div className="chip" key={short} draggable
+               onDragStart={e => e.dataTransfer.setData('text/team', short)}>
+            <TeamLogo short={shown} />{hasLogo ? <span>{t.short}</span> : null}
           </div>
         );
       })}
@@ -65,19 +76,33 @@ function ChipTray({ draw }) {
   );
 }
 
-function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, selected }) {
+function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, selected }) {
   const r = Engine.resolveMatch(id, draw, scores);
   const sc = scores[id] || { a: 0, b: 0 };
   const live = r.teamA && r.teamB && !r.winner;
   const revealClass = justDrew && id.startsWith('WQF') ? ' reveal' : '';
   const isQF = id.startsWith('WQF');
   const g = isQF ? Engine.GRAPH[id] : null;
+  const bothPresent = r.teamA && r.teamB;
+  // Debounce single-click (open drawer) so a double-click (quick 3-0) doesn't also open it.
+  const clickT = React.useRef(null);
+  const handleClick = () => {
+    if (clickT.current) return;
+    clickT.current = setTimeout(() => { clickT.current = null; onOpen(id); }, 180);
+  };
+  const quickWin = side => e => {
+    e.stopPropagation();
+    if (clickT.current) { clearTimeout(clickT.current); clickT.current = null; }
+    onQuickWin(id, side);
+  };
   return (
-    <div className={'match' + (live ? ' live' : '') + (selected ? ' selected' : '') + revealClass} onClick={() => onOpen(id)}>
+    <div className={'match' + (live ? ' live' : '') + (selected ? ' selected' : '') + revealClass} onClick={handleClick}>
       <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA}
-        seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} />
+        seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} onPlace={isQF ? onPlace : undefined}
+        onDoubleClick={bothPresent ? quickWin('a') : undefined} />
       <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
-        seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} />
+        seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} onPlace={isQF ? onPlace : undefined}
+        onDoubleClick={bothPresent ? quickWin('b') : undefined} />
       <div className="meta"><span className="date">{fmtDate(DATA.dates[id])}</span><span className="bo5">BO5</span></div>
     </div>
   );
@@ -172,18 +197,20 @@ const LB_COLUMNS = [
   { title: 'LB Final', ids: ['LBF'] },
 ];
 
-function BracketView({ draw, scores, onOpen, justDrew, onSwap, openId }) {
+function BracketView({ draw, scores, onOpen, justDrew, onSwap, onPlace, onQuickWin, openId }) {
+  const mc = (id) => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen}
+    justDrew={justDrew} onSwap={onSwap} onPlace={onPlace} onQuickWin={onQuickWin} selected={id === openId} />;
   const col = (c) => (
     <div className="col" key={c.title}>
       <h3>{c.title}</h3>
-      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={id === openId} />)}
+      {c.ids.map(mc)}
     </div>
   );
   return (
     <div className="bracket">
       <div className="section-title">Winners' Bracket</div>
       <div className="cols">{COLUMNS.map(col)}
-        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={'GF' === openId} /></div>
+        <div className="col"><h3>Grand Final</h3>{mc('GF')}</div>
       </div>
       <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
       <div className="cols">{LB_COLUMNS.map(col)}</div>
@@ -244,6 +271,8 @@ function App() {
 
   const doScore = useCallback((id, a, b) => setScores(s => Engine.setScore(s, id, a, b)), []);
   const doSwap = useCallback((i, j) => setDraw(d => Draw.swap(d, i, j)), []);
+  const doPlace = useCallback((team, seedIndex) => setDraw(d => Draw.place(d, seedIndex, team)), []);
+  const doQuickWin = useCallback((id, side) => setScores(s => Engine.setScore(s, id, side === 'a' ? 3 : 0, side === 'a' ? 0 : 3)), []);
 
   const doDraw = useCallback(() => {
     const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
@@ -269,9 +298,9 @@ function App() {
   return (
     <div>
       <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
-      <ChipTray draw={displayDraw} />
+      <ChipTray draw={draw} playInPick={playInPick} />
       <div className="layout">
-        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} openId={openId} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} onPlace={doPlace} onQuickWin={doQuickWin} openId={openId} />
         <div className="side">
           <StandingsTable draw={displayDraw} scores={scores} />
           <RulesBox />

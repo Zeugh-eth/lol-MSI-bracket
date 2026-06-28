@@ -97,6 +97,7 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
   filter:drop-shadow(3px 3px 0 rgba(0,0,0,.55)); transition:transform .1s}
 .match:hover{transform:translateX(2px)}
 .match:hover .row{background:var(--paper-bright)}
+.match:hover .row.winner{background:var(--red)} /* keep winner red on hover */
 .match.live .row:not(.winner){box-shadow:inset 3px 0 0 var(--red)} /* subtle "playable now" tick */
 .match.selected{outline:3px solid var(--yellow); outline-offset:4px} /* the focused match */
 .row{
@@ -168,7 +169,9 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
 .rules-list b{font-weight:800}
 
 /* ---------- Chip tray (red painted team chips) ---------- */
-.poolbar{display:flex; gap:10px; flex-wrap:wrap; padding:4px 22px 0}
+.poolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:4px 22px 0}
+.bench-label{font-family:var(--disp); text-transform:uppercase; letter-spacing:1px; font-size:12px;
+  color:var(--yellow); margin-right:4px}
 .chip{display:flex; align-items:center; gap:7px; background:var(--red); color:var(--paper);
   border:2px solid var(--ink); padding:4px 12px 4px 5px; cursor:grab;
   font-family:var(--disp); letter-spacing:1px; font-size:13px; text-transform:uppercase;
