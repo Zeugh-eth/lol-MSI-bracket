@@ -51,7 +51,7 @@ function ChipTray({ draw }) {
   );
 }
 
-function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap }) {
+function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap, selected }) {
   const r = Engine.resolveMatch(id, draw, scores);
   const sc = scores[id] || { a: 0, b: 0 };
   const live = r.teamA && r.teamB && !r.winner;
@@ -59,12 +59,12 @@ function MatchCard({ id, draw, scores, onOpen, justDrew, onSwap }) {
   const isQF = id.startsWith('WQF');
   const g = isQF ? Engine.GRAPH[id] : null;
   return (
-    <div className={'match' + (live ? ' live' : '') + revealClass} onClick={() => onOpen(id)}>
+    <div className={'match' + (live ? ' live' : '') + (selected ? ' selected' : '') + revealClass} onClick={() => onOpen(id)}>
       <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA}
         seedIndex={isQF ? g.a.seed : undefined} onSwap={isQF ? onSwap : undefined} />
       <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB}
         seedIndex={isQF ? g.b.seed : undefined} onSwap={isQF ? onSwap : undefined} />
-      <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span>BO5</span></div>
+      <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span className="bo5">BO5</span></div>
     </div>
   );
 }
@@ -115,7 +115,7 @@ function Drawer({ id, draw, scores, onScore, onClose }) {
           <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
           <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
           <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
-          {r.winner && <div style={{ color: 'var(--win)', fontWeight: 700 }}>Winner: {nameOf(r.winner)}</div>}
+          {r.winner && <div className="winner-tag">Winner — {nameOf(r.winner)}</div>}
           <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
         </>}
       </div>
@@ -135,18 +135,18 @@ const LB_COLUMNS = [
   { title: 'LB Final', ids: ['LBF'] },
 ];
 
-function BracketView({ draw, scores, onOpen, justDrew, onSwap }) {
+function BracketView({ draw, scores, onOpen, justDrew, onSwap, openId }) {
   const col = (c) => (
     <div className="col" key={c.title}>
       <h3>{c.title}</h3>
-      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} />)}
+      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={id === openId} />)}
     </div>
   );
   return (
     <div className="bracket">
       <div className="section-title">Winners' Bracket</div>
       <div className="cols">{COLUMNS.map(col)}
-        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} /></div>
+        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} justDrew={justDrew} onSwap={onSwap} selected={'GF' === openId} /></div>
       </div>
       <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
       <div className="cols">{LB_COLUMNS.map(col)}</div>
@@ -157,17 +157,20 @@ function BracketView({ draw, scores, onOpen, justDrew, onSwap }) {
 function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied }) {
   return (
     <div className="topbar">
-      <h1>MSI 2026 · Stage 2</h1>
+      <div className="brand">
+        <span className="brand-word">MSI<em>26</em></span>
+        <span className="brand-tag">Stage 2 · Bracket</span>
+      </div>
       <div className="spacer" />
-      <label style={{ color: 'var(--muted)', fontSize: 12 }}>Play-In Winner:&nbsp;
+      <label className="pick">Play-In Winner
         <select value={playInPick || ''} onChange={e => onPick(e.target.value || null)}>
           <option value="">— TBD —</option>
           {DATA.playInCandidates.map(c => <option key={c.short} value={c.short}>{c.short} · {c.name}</option>)}
         </select>
       </label>
-      <button className="btn primary" onClick={onDraw}>⟳ Draw</button>
-      <button className="btn" onClick={onCopy}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
-      <button className="btn" onClick={onReset}>Reset</button>
+      <button className="btn primary" onClick={onDraw}>↯ Draw</button>
+      <button className="btn" onClick={onCopy}>{copied ? 'Copied ✓' : 'Copy link'}</button>
+      <button className="btn ghost" onClick={onReset}>Reset</button>
     </div>
   );
 }
@@ -231,7 +234,7 @@ function App() {
       <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
       <ChipTray draw={displayDraw} />
       <div className="layout">
-        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} justDrew={justDrew} onSwap={doSwap} openId={openId} />
         <StandingsTable draw={displayDraw} scores={scores} />
       </div>
       <Drawer id={openId} draw={displayDraw} scores={scores} onScore={doScore} onClose={() => setOpenId(null)} />
