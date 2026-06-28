@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MSI 2026 — Stage 2 Bracket Simulator</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style id="appstyle">:root{--bg:#11151c;--panel:#171c26;--panel2:#1d2330;--line:#2b3342;--text:#f3ede0;--muted:#9aa3b2;--accent:#e8567f;--accent2:#ff5d73;--win:#5ad19a;}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1b2436 0%,var(--bg) 60%);color:var(--text);font:14px/1.4 'Segoe UI',system-ui,sans-serif}
+.topbar{display:flex;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(17,21,28,.9);backdrop-filter:blur(6px);z-index:5}
+.topbar h1{font-size:16px;margin:0;letter-spacing:.5px;text-transform:uppercase;flex:0 0 auto}
+.topbar .spacer{flex:1}
+button.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+button.btn:hover{border-color:var(--accent)}
+button.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#1b0f16}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.layout{display:flex;gap:18px;padding:20px;align-items:flex-start}
+.bracket{flex:1;overflow-x:auto;padding-bottom:30px}
+.section-title{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-size:12px;margin:8px 0}
+.cols{display:flex;gap:46px;min-width:max-content}
+.col{display:flex;flex-direction:column;gap:18px}
+.col h3{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center;background:#0d1117;border:1px solid var(--line);border-radius:6px;padding:6px;margin:0}
+.match{background:var(--panel);border:1px solid var(--line);border-radius:8px;width:230px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.match:hover{border-color:var(--accent)}
+.match.live{border-color:var(--accent2)}
+.row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row.winner{background:rgba(90,209,154,.08)}
+.row .logo{width:22px;height:22px;border-radius:4px;object-fit:contain;background:#0d1117;flex:0 0 auto}
+.row .badge{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex:0 0 auto;border:1px solid var(--line);}
+.row .name{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .name.tbd{color:var(--muted);font-weight:500}
+.row .score{width:22px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.match .meta{display:flex;justify-content:space-between;padding:4px 9px;font-size:10px;color:var(--muted);background:#0d1117}
+.dropslot{outline:2px dashed var(--accent);outline-offset:-2px}
+.standings{width:300px;flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.standings table{width:100%;border-collapse:collapse}
+.standings td{padding:6px 4px;border-bottom:1px solid var(--line)}
+.standings .pl{color:var(--accent);font-weight:800;width:54px}
+.standings tr.out{opacity:.55}
+.drawer{position:fixed;top:0;right:0;height:100%;width:360px;background:var(--panel2);border-left:1px solid var(--line);box-shadow:-20px 0 40px rgba(0,0,0,.4);transform:translateX(100%);transition:transform .2s;z-index:20;padding:18px;overflow-y:auto}
+.drawer.open{transform:translateX(0)}
+.drawer h2{margin:0 0 4px;font-size:15px}
+.drawer .close{position:absolute;top:14px;right:14px;cursor:pointer;color:var(--muted);background:none;border:none;font-size:20px}
+.drawer .vs{display:flex;align-items:center;gap:10px;margin:14px 0}
+.scorebox{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font-weight:800}
+.h2h{margin-top:18px;padding:14px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center}
+.poolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 20px 6px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 10px 4px 4px;cursor:grab;font-weight:600;font-size:12px}
+.chip[draggable=true]:active{cursor:grabbing}
+.reveal{animation:pop .35s ease}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div id="root">Loading… (this page needs an internet connection on first load for React)</div>
+<script>
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  const teams = [
+    { short: 'BLG',   name: 'Bilibili Gaming',      region: 'CN',   pool: 1, color: '#1a2a6c', logoUrl: null },
+    { short: 'G2',    name: 'G2 Esports',           region: 'EMEA', pool: 1, color: '#ee3d23', logoUrl: null },
+    { short: 'HLE',   name: 'Hanwha Life Esports',  region: 'KR',   pool: 2, color: '#ff7900', logoUrl: null },
+    { short: 'LYON',  name: 'Lyon',                 region: 'NA',   pool: 2, color: '#1e9de3', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/0/01/LYON_%282024_American_Team%29logo_profile.png/revision/latest?cb=20251223131015' },
+    { short: 'TSTW',  name: 'Team Secret Whales',   region: 'APAC', pool: 3, color: '#0b8457', logoUrl: null },
+    { short: 'FURIA', name: 'FURIA',                region: 'BR',   pool: 3, color: '#000000', logoUrl: null },
+    { short: 'TES',   name: 'Top Esports',          region: 'CN',   pool: 4, color: '#e60012', logoUrl: null },
+    { short: 'PIW',   name: 'Play-In Winner',       region: 'INT',  pool: 4, color: '#6c5ce7', logoUrl: null },
+  ];
+  const playInCandidates = [
+    { short: 'KCORP', name: 'Karmine Corp',      region: 'EMEA', color: '#0a3cff', logoUrl: null },
+    { short: 'T1',    name: 'T1',                region: 'KR',   color: '#e2012d', logoUrl: null },
+    { short: 'TL',    name: 'Team Liquid',       region: 'NA',   color: '#04193e', logoUrl: null },
+    { short: 'DCGTW', name: 'Deep Cross Gaming', region: 'APAC', color: '#00a3a3', logoUrl: 'https://static.wikia.nocookie.net/lolesports_gamepedia_en/images/d/d7/Deep_Cross_Gaminglogo_profile.png/revision/latest?cb=20260121020201' },
+  ];
+  const matchIds = ['WQF1','WQF2','WQF3','WQF4','WSF1','WSF2','WBF','LR1A','LR1B','LR2A','LR2B','LR3','LBF','GF'];
+  // Best-effort dates from the wiki schedule; null where unknown. Edit as schedule firms up.
+  const dates = {
+    WQF1:'2026-07-01', WQF2:'2026-07-01', WQF3:'2026-07-02', WQF4:'2026-07-02',
+    LR1A:'2026-07-03', LR1B:'2026-07-03', WSF1:'2026-07-04', WSF2:'2026-07-04',
+    LR2A:'2026-07-05', LR2B:'2026-07-05', LR3:'2026-07-06', WBF:'2026-07-08',
+    LBF:'2026-07-10', GF:'2026-07-11',
+  };
+  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, dates };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  // Source: {seed:n} | {winner:id} | {loser:id}
+  const GRAPH = {
+    WQF1: { round: 1, a: { seed: 0 }, b: { seed: 1 } },
+    WQF2: { round: 1, a: { seed: 2 }, b: { seed: 3 } },
+    WQF3: { round: 1, a: { seed: 4 }, b: { seed: 5 } },
+    WQF4: { round: 1, a: { seed: 6 }, b: { seed: 7 } },
+    LR1A: { round: 1, a: { loser: 'WQF1' }, b: { loser: 'WQF2' } },
+    LR1B: { round: 1, a: { loser: 'WQF3' }, b: { loser: 'WQF4' } },
+    WSF1: { round: 2, a: { winner: 'WQF1' }, b: { winner: 'WQF2' } },
+    WSF2: { round: 2, a: { winner: 'WQF3' }, b: { winner: 'WQF4' } },
+    LR2A: { round: 2, a: { winner: 'LR1A' }, b: { loser: 'WSF2' } }, // cross-seed
+    LR2B: { round: 2, a: { winner: 'LR1B' }, b: { loser: 'WSF1' } }, // cross-seed
+    LR3:  { round: 3, a: { winner: 'LR2A' }, b: { winner: 'LR2B' } },
+    WBF:  { round: 4, a: { winner: 'WSF1' }, b: { winner: 'WSF2' } },
+    LBF:  { round: 4, a: { winner: 'LR3' },  b: { loser: 'WBF' } },
+    GF:   { round: 5, a: { winner: 'WBF' },  b: { winner: 'LBF' } },
+  };
+
+  function isValidBo5(a, b) {
+    if (a < 0 || b < 0 || a > 3 || b > 3) return false;
+    if (a === 3 && b === 3) return false;
+    return true;
+  }
+
+  function emptyScores() {
+    const s = {};
+    for (const id of Object.keys(GRAPH)) s[id] = { a: 0, b: 0 };
+    return s;
+  }
+
+  function resolveSource(src, draw, scores) {
+    if ('seed' in src) return draw ? (draw[src.seed] ?? null) : null;
+    const r = resolveMatch(src.winner || src.loser, draw, scores);
+    if ('winner' in src) return r.winner;
+    return r.loser;
+  }
+
+  function resolveMatch(matchId, draw, scores) {
+    const m = GRAPH[matchId];
+    const teamA = resolveSource(m.a, draw, scores);
+    const teamB = resolveSource(m.b, draw, scores);
+    let winner = null, loser = null;
+    const sc = scores[matchId] || { a: 0, b: 0 };
+    if (teamA && teamB && isValidBo5(sc.a, sc.b)) {
+      if (sc.a === 3) { winner = teamA; loser = teamB; }
+      else if (sc.b === 3) { winner = teamB; loser = teamA; }
+    }
+    return { teamA, teamB, winner, loser };
+  }
+
+  // ids strictly downstream of a given match (anything that consumes its winner/loser, transitively)
+  function downstreamOf(matchId) {
+    const out = new Set();
+    let frontier = [matchId];
+    while (frontier.length) {
+      const next = [];
+      for (const id of Object.keys(GRAPH)) {
+        const m = GRAPH[id];
+        const refs = [m.a, m.b].filter(s => !('seed' in s)).map(s => s.winner || s.loser);
+        if (refs.some(r => frontier.includes(r)) && !out.has(id)) { out.add(id); next.push(id); }
+      }
+      frontier = next;
+    }
+    return out;
+  }
+
+  function setScore(scores, matchId, a, b) {
+    const copy = {};
+    for (const id of Object.keys(scores)) copy[id] = { a: scores[id].a, b: scores[id].b };
+    copy[matchId] = { a, b };
+    for (const id of downstreamOf(matchId)) copy[id] = { a: 0, b: 0 };
+    return copy;
+  }
+
+  return { __name: 'MSI_Engine', GRAPH, isValidBo5, emptyScores, resolveMatch, setScore, downstreamOf };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  // Where a loss eliminates you -> finishing place. (GF loser = 2nd, GF winner = 1st handled separately.)
+  const ELIM_PLACE = {
+    LR1A: 7, LR1B: 7, // out in losers round 1
+    LR2A: 5, LR2B: 5, // out in losers round 2
+    LR3: 4,           // out in losers round 3
+    LBF: 3,           // out in losers final
+  };
+  const LABELS = { 1:'1st', 2:'2nd', 3:'3rd', 4:'4th', 5:'5th–6th', 7:'7th–8th' };
+
+  function compute(Engine, draw, scores) {
+    const place = {};   // short -> number
+    const alive = {};   // short -> bool
+    for (const t of (draw || [])) if (t) alive[t] = true;
+
+    // losers-bracket + LB final eliminations
+    for (const id of Object.keys(ELIM_PLACE)) {
+      const r = Engine.resolveMatch(id, draw, scores);
+      if (r.loser) { place[r.loser] = ELIM_PLACE[id]; alive[r.loser] = false; }
+    }
+    // grand final
+    const gf = Engine.resolveMatch('GF', draw, scores);
+    if (gf.winner) { place[gf.winner] = 1; alive[gf.winner] = false;
+                     place[gf.loser] = 2; alive[gf.loser] = false; }
+
+    const rows = (draw || []).filter(Boolean).map(short => ({
+      short,
+      place: place[short] != null ? place[short] : null,
+      placeLabel: place[short] != null ? LABELS[place[short]] : '—',
+      alive: alive[short] !== false,
+    }));
+    rows.sort((x, y) => {
+      // Still-competing teams lead the table; eliminated teams sink to the
+      // bottom ordered by finishing place. Once the tournament completes,
+      // every team is eliminated, so this collapses to pure 1st..8th order.
+      if (x.alive !== y.alive) return x.alive ? -1 : 1;
+      const px = x.place == null ? 99 : x.place;
+      const py = y.place == null ? 99 : y.place;
+      if (px !== py) return px - py;
+      return x.short.localeCompare(y.short);
+    });
+    return rows;
+  }
+
+  return { __name: 'MSI_Standings', compute };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rng) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  const QFS = [[0,1],[2,3],[4,5],[6,7]];
+  function satisfies(draw, byShort) {
+    return QFS.every(([i, j]) => {
+      const A = byShort[draw[i]], B = byShort[draw[j]];
+      if (!A || !B) return false;
+      const oneHighOneLow = (A.pool <= 2) !== (B.pool <= 2);
+      const diffRegion = A.region !== B.region;
+      return oneHighOneLow && diffRegion;
+    });
+  }
+  function generate(teams, rng) {
+    const byShort = Object.fromEntries(teams.map(t => [t.short, t]));
+    const high = teams.filter(t => t.pool <= 2).map(t => t.short);
+    const low = teams.filter(t => t.pool > 2).map(t => t.short);
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const h = shuffle(high, rng), l = shuffle(low, rng);
+      const draw = [h[0], l[0], h[1], l[1], h[2], l[2], h[3], l[3]];
+      if (satisfies(draw, byShort)) return draw;
+    }
+    throw new Error('could not satisfy draw constraints');
+  }
+  return { __name: 'MSI_Draw', makeRng, satisfies, generate };
+});
+
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root[api.__name] = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  const KEY = 'msi2026sim';
+  function b64encode(str) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf8').toString('base64');
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64decode(b64) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(b64, 'base64').toString('utf8');
+    return decodeURIComponent(escape(atob(b64)));
+  }
+  function encode(state) { return b64encode(JSON.stringify(state)); }
+  function decode(str) {
+    if (!str) return null;
+    try { const o = JSON.parse(b64decode(str)); return (o && typeof o === 'object') ? o : null; }
+    catch (e) { return null; }
+  }
+  function save(state, storage) { try { storage.setItem(KEY, encode(state)); } catch (e) {} }
+  function load(storage) { try { return decode(storage.getItem(KEY)); } catch (e) { return null; } }
+  return { __name: 'MSI_Persist', KEY, encode, decode, save, load };
+});
+
+</script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback } = React;
+const DATA = MSI_DATA, Engine = MSI_Engine, Standings = MSI_Standings, Draw = MSI_Draw, Persist = MSI_Persist;
+const ALL_TEAMS = DATA.teams.concat(DATA.playInCandidates);
+const teamByShort = Object.fromEntries(ALL_TEAMS.map(t => [t.short, t]));
+
+function TeamLogo({ short }) {
+  const t = teamByShort[short];
+  const [err, setErr] = useState(false);
+  if (!t) return <span className="badge" style={{ background: '#333' }}>?</span>;
+  if (t.logoUrl && !err)
+    return <img className="logo" src={t.logoUrl} alt={t.short} onError={() => setErr(true)} />;
+  return <span className="badge" style={{ background: t.color }}>{t.short.slice(0, 3)}</span>;
+}
+
+function TeamRow({ short, score, isWinner }) {
+  const t = short ? teamByShort[short] : null;
+  return (
+    <div className={'row' + (isWinner ? ' winner' : '')}>
+      {short ? <TeamLogo short={short} /> : <span className="badge" style={{ background: '#222' }}> </span>}
+      <span className={'name' + (t ? '' : ' tbd')}>{t ? (t.short + ' · ' + t.name) : 'TBD'}</span>
+      <span className="score">{short ? score : ''}</span>
+    </div>
+  );
+}
+
+function MatchCard({ id, draw, scores, onOpen }) {
+  const r = Engine.resolveMatch(id, draw, scores);
+  const sc = scores[id] || { a: 0, b: 0 };
+  const live = r.teamA && r.teamB && !r.winner;
+  return (
+    <div className={'match' + (live ? ' live' : '')} onClick={() => onOpen(id)}>
+      <TeamRow short={r.teamA} score={sc.a} isWinner={r.winner && r.winner === r.teamA} />
+      <TeamRow short={r.teamB} score={sc.b} isWinner={r.winner && r.winner === r.teamB} />
+      <div className="meta"><span>{DATA.dates[id] || 'TBD'}</span><span>BO5</span></div>
+    </div>
+  );
+}
+
+const COLUMNS = [
+  { title: 'Round 1', ids: ['WQF1','WQF2','WQF3','WQF4'] },
+  { title: 'Round 2', ids: ['WSF1','WSF2'] },
+  { title: 'Round 4', ids: ['WBF'] },
+];
+const LB_COLUMNS = [
+  { title: 'LB Round 1', ids: ['LR1A','LR1B'] },
+  { title: 'LB Round 2', ids: ['LR2A','LR2B'] },
+  { title: 'LB Round 3', ids: ['LR3'] },
+  { title: 'LB Final', ids: ['LBF'] },
+];
+
+function BracketView({ draw, scores, onOpen }) {
+  const col = (c) => (
+    <div className="col" key={c.title}>
+      <h3>{c.title}</h3>
+      {c.ids.map(id => <MatchCard key={id} id={id} draw={draw} scores={scores} onOpen={onOpen} />)}
+    </div>
+  );
+  return (
+    <div className="bracket">
+      <div className="section-title">Winners' Bracket</div>
+      <div className="cols">{COLUMNS.map(col)}
+        <div className="col"><h3>Grand Final</h3><MatchCard id="GF" draw={draw} scores={scores} onOpen={onOpen} /></div>
+      </div>
+      <div className="section-title" style={{ marginTop: 28 }}>Losers' Bracket</div>
+      <div className="cols">{LB_COLUMNS.map(col)}</div>
+    </div>
+  );
+}
+
+function App() {
+  const [draw, setDraw] = useState(null);
+  const [scores, setScores] = useState(Engine.emptyScores());
+  return (
+    <div>
+      <div className="topbar"><h1>MSI 2026 · Stage 2</h1><div className="spacer" /></div>
+      <div className="layout">
+        <BracketView draw={draw} scores={scores} onOpen={() => {}} />
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>
