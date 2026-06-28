@@ -371,14 +371,75 @@ function BracketView({ draw, scores, onOpen }) {
   );
 }
 
+function TopBar({ onDraw, onReset, onCopy, playInPick, onPick, copied }) {
+  return (
+    <div className="topbar">
+      <h1>MSI 2026 · Stage 2</h1>
+      <div className="spacer" />
+      <label style={{ color: 'var(--muted)', fontSize: 12 }}>Play-In Winner:&nbsp;
+        <select value={playInPick || ''} onChange={e => onPick(e.target.value || null)}>
+          <option value="">— TBD —</option>
+          {DATA.playInCandidates.map(c => <option key={c.short} value={c.short}>{c.short} · {c.name}</option>)}
+        </select>
+      </label>
+      <button className="btn primary" onClick={onDraw}>⟳ Draw</button>
+      <button className="btn" onClick={onCopy}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
+      <button className="btn" onClick={onReset}>Reset</button>
+    </div>
+  );
+}
+
+// Apply the play-in pick: substitute the chosen team's identity into the PIW slot for display.
+function applyPlayIn(short) {
+  // returns a function mapping a slot short to display short (PIW -> picked team)
+  return s => (s === 'PIW' && short ? short : s);
+}
+
 function App() {
+  const seedRef = React.useRef(1);
   const [draw, setDraw] = useState(null);
   const [scores, setScores] = useState(Engine.emptyScores());
+  const [playInPick, setPlayInPick] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  // hydrate once: URL hash beats localStorage
+  useEffect(() => {
+    const fromUrl = Persist.decode(location.hash.replace(/^#/, ''));
+    const st = fromUrl || Persist.load(window.localStorage);
+    if (st) { setDraw(st.draw || null); setScores(st.scores || Engine.emptyScores()); setPlayInPick(st.playInPick || null); }
+  }, []);
+
+  // autosave
+  useEffect(() => {
+    Persist.save({ draw, scores, playInPick }, window.localStorage);
+  }, [draw, scores, playInPick]);
+
+  const doDraw = useCallback(() => {
+    const rng = Draw.makeRng((seedRef.current = seedRef.current + 1) * 2654435761 >>> 0 ^ Date.now());
+    const d = Draw.generate(DATA.teams, rng);
+    setDraw(d); setScores(Engine.emptyScores());
+  }, []);
+  const doReset = useCallback(() => {
+    setDraw(null); setScores(Engine.emptyScores()); setPlayInPick(null);
+    history.replaceState(null, '', location.pathname);
+  }, []);
+  const doCopy = useCallback(() => {
+    const enc = Persist.encode({ draw, scores, playInPick });
+    const url = location.origin + location.pathname + '#' + enc;
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, done); else done();
+    history.replaceState(null, '', '#' + enc);
+  }, [draw, scores, playInPick]);
+
+  // draw with PIW substituted for display/logic
+  const displayDraw = useMemo(() => draw && draw.map(applyPlayIn(playInPick)), [draw, playInPick]);
+
   return (
     <div>
-      <div className="topbar"><h1>MSI 2026 · Stage 2</h1><div className="spacer" /></div>
+      <TopBar onDraw={doDraw} onReset={doReset} onCopy={doCopy} playInPick={playInPick} onPick={setPlayInPick} copied={copied} />
       <div className="layout">
-        <BracketView draw={draw} scores={scores} onOpen={() => {}} />
+        <BracketView draw={displayDraw} scores={scores} onOpen={setOpenId} />
       </div>
     </div>
   );
