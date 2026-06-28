@@ -35,12 +35,18 @@ function ChipTray({ draw }) {
   if (!draw) return null;
   return (
     <div className="poolbar">
-      {draw.map((short, i) => (
-        <div className="chip" key={i} draggable
-             onDragStart={e => e.dataTransfer.setData('text/seed', String(i))}>
-          <TeamLogo short={short} /> {teamByShort[short] ? teamByShort[short].short : short}
-        </div>
-      ))}
+      {draw.map((short, i) => {
+        const t = teamByShort[short];
+        // Only append text label when team has a real logo (img), so the badge fallback
+        // (which already prints the short code) doesn't cause "HLE HLE" duplication.
+        const hasLogo = t && t.logoUrl;
+        return (
+          <div className="chip" key={i} draggable
+               onDragStart={e => e.dataTransfer.setData('text/seed', String(i))}>
+            <TeamLogo short={short} />{hasLogo ? <span>{t.short}</span> : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -93,22 +99,27 @@ function Stepper({ value, onChange }) {
 }
 
 function Drawer({ id, draw, scores, onScore, onClose }) {
-  if (!id) return <div className="drawer" />;
-  const r = Engine.resolveMatch(id, draw, scores);
-  const sc = scores[id] || { a: 0, b: 0 };
+  const isOpen = !!id;
+  const r = isOpen ? Engine.resolveMatch(id, draw, scores) : {};
+  const sc = isOpen ? (scores[id] || { a: 0, b: 0 }) : { a: 0, b: 0 };
   const setA = v => { if (Engine.isValidBo5(v, sc.b)) onScore(id, v, sc.b); };
   const setB = v => { if (Engine.isValidBo5(sc.a, v)) onScore(id, sc.a, v); };
   const nameOf = s => (s ? (teamByShort[s] ? teamByShort[s].name : s) : 'TBD');
   return (
-    <div className="drawer open">
-      <button className="close" onClick={onClose}>×</button>
-      <h2>{id} · BO5</h2>
-      <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
-      <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
-      <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
-      {r.winner && <div style={{ color: 'var(--win)', fontWeight: 700 }}>Winner: {nameOf(r.winner)}</div>}
-      <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
-    </div>
+    <>
+      <div className={'drawer-backdrop' + (isOpen ? '' : ' hidden')} onClick={onClose} />
+      <div className={'drawer' + (isOpen ? ' open' : '')}>
+        {isOpen && <>
+          <button className="close" onClick={onClose}>×</button>
+          <h2>{id} · BO5</h2>
+          <div style={{ color: 'var(--muted)', fontSize: 12 }}>{DATA.dates[id] || 'Date TBD'}</div>
+          <div className="scorebox"><span><TeamLogo short={r.teamA} /> {nameOf(r.teamA)}</span><Stepper value={sc.a} onChange={setA} /></div>
+          <div className="scorebox"><span><TeamLogo short={r.teamB} /> {nameOf(r.teamB)}</span><Stepper value={sc.b} onChange={setB} /></div>
+          {r.winner && <div style={{ color: 'var(--win)', fontWeight: 700 }}>Winner: {nameOf(r.winner)}</div>}
+          <div className="h2h">Head-to-head history<br /><small>coming soon</small></div>
+        </>}
+      </div>
+    </>
   );
 }
 

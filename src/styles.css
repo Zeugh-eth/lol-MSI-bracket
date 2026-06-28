@@ -20,8 +20,8 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:none}
 .row.winner{background:rgba(90,209,154,.08)}
-.row .logo{width:22px;height:22px;border-radius:4px;object-fit:contain;background:#0d1117;flex:0 0 auto}
-.row .badge{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex:0 0 auto;border:1px solid var(--line);}
+.logo{width:22px;height:22px;border-radius:4px;object-fit:contain;background:#0d1117;flex:0 0 auto}
+.badge{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex:0 0 auto;border:1px solid var(--line);}
 .row .name{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .name.tbd{color:var(--muted);font-weight:500}
 .row .score{width:22px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
@@ -46,3 +46,15 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .chip[draggable=true]:active{cursor:grabbing}
 .reveal{animation:pop .35s ease}
 @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Bracket connector lines — right-border elbow per column */
+.cols{position:relative}
+/* Each column except the last gets a subtle right edge indicating feed direction */
+.col:not(:last-child){position:relative}
+.col:not(:last-child)::after{content:'';position:absolute;top:40px;right:-23px;bottom:40px;width:1px;background:linear-gradient(to bottom,transparent 0%,var(--line) 15%,var(--line) 85%,transparent 100%);pointer-events:none}
+/* Connector arrow nub — horizontal bar at vertical midpoint */
+.col:not(:last-child)::before{content:'';position:absolute;top:50%;right:-23px;width:23px;height:1px;background:var(--line);pointer-events:none}
+
+/* Drawer backdrop */
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:15;opacity:1;transition:opacity .2s}
+.drawer-backdrop.hidden{opacity:0;pointer-events:none}

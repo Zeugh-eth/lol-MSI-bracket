@@ -30,5 +30,7 @@ ${ui}
 </html>`;
 
 const css = read('src/styles.css');
-fs.writeFileSync(path.join(__dirname, 'index.html'), html.replace('__CSS__', css));
-console.log('Wrote index.html (' + html.length + ' bytes)');
+const outPath = path.join(__dirname, 'index.html');
+const outContent = html.replace('__CSS__', css) + '\n';
+fs.writeFileSync(outPath, outContent);
+console.log('Wrote index.html (' + outContent.length + ' bytes)');
