@@ -131,33 +131,33 @@ button.btn.ghost:hover{background:var(--ink); color:var(--paper)}
 .standings .section-title{color:var(--ink); font-size:24px; margin:2px 0 16px}
 .standings .section-title::after{background:var(--red)}
 .standings-empty{font:600 13px var(--body); color:#6f6c64}
-.standings table{width:100%; border-collapse:collapse}
-.standings td{padding:7px 4px; border-bottom:1.5px solid rgba(20,18,16,.14); vertical-align:middle}
-.standings tr:last-child td{border-bottom:none}
-.standings .pl{font-family:var(--disp); font-size:18px; color:var(--red); width:64px; letter-spacing:.5px; line-height:1}
-.standings td .logo{width:22px; height:22px; object-fit:contain; background:var(--paper-bright);
-  border:1.5px solid var(--ink); border-radius:3px; padding:1px; display:block}
-.standings td .badge{width:22px; height:22px; border-radius:3px; display:flex; align-items:center;
+/* standings = stacked groups; tied places (5th–6th, 7th–8th) share one cut */
+.stand-group{display:flex; align-items:center; gap:10px; padding:7px 2px;
+  border-bottom:1.5px solid rgba(20,18,16,.14)}
+.stand-group:last-child{border-bottom:none}
+.stand-group .pl{flex:0 0 56px; font-family:var(--disp); font-size:18px; color:var(--red);
+  letter-spacing:.5px; line-height:.95}
+.stand-teams{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px}
+.stand-team{display:flex; align-items:center; gap:9px; min-width:0}
+.stand-team .logo{width:22px; height:22px; flex:0 0 auto; object-fit:contain; background:var(--paper-bright);
+  border:1.5px solid var(--ink); border-radius:3px; padding:1px}
+.stand-team .badge{width:22px; height:22px; flex:0 0 auto; border-radius:3px; display:flex; align-items:center;
   justify-content:center; font:800 9px var(--body); color:#fff; border:1.5px solid var(--ink)}
-.standings td:last-child{font:700 13px var(--body)}
-.standings tr.out{opacity:.45}
-.standings tr.out td:last-child{text-decoration:line-through}
+.stand-team .tn{font:700 13px var(--body); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stand-team.out{opacity:.5}
+.stand-team.out .tn{text-decoration:line-through}
 
-/* podium medals — gold / silver / bronze, tuned for the bone-paper background */
-.standings tr.gold td, .standings tr.silver td, .standings tr.bronze td{border-bottom-color:transparent}
-.standings tr.gold td{background:rgba(184,134,11,.16)}
-.standings tr.silver td{background:rgba(110,118,125,.16)}
-.standings tr.bronze td{background:rgba(166,94,43,.15)}
-.standings tr.gold .pl{color:#a87d12; font-size:32px}
-.standings tr.silver .pl{color:#5d646b; font-size:27px}
-.standings tr.bronze .pl{color:#9a5526; font-size:24px}
-.standings tr.gold td:last-child{font-weight:800; font-size:17px; color:#7c5c0c}
-.standings tr.silver td:last-child{font-weight:800; font-size:15px; color:#474d53}
-.standings tr.bronze td:last-child{font-weight:800; font-size:15px; color:#7a4220}
-.standings tr.gold td .logo, .standings tr.silver td .logo, .standings tr.bronze td .logo{width:26px; height:26px}
-.standings tr.gold td:first-child{box-shadow:inset 4px 0 0 #a87d12}
-.standings tr.silver td:first-child{box-shadow:inset 4px 0 0 #5d646b}
-.standings tr.bronze td:first-child{box-shadow:inset 4px 0 0 #9a5526}
+/* podium medals — gold / silver / bronze on the bone-paper background */
+.stand-group.gold{background:rgba(184,134,11,.16); box-shadow:inset 4px 0 0 #a87d12; border-bottom-color:transparent}
+.stand-group.silver{background:rgba(110,118,125,.16); box-shadow:inset 4px 0 0 #5d646b; border-bottom-color:transparent}
+.stand-group.bronze{background:rgba(166,94,43,.15); box-shadow:inset 4px 0 0 #9a5526; border-bottom-color:transparent}
+.stand-group.gold .pl{color:#a87d12; font-size:32px}
+.stand-group.silver .pl{color:#5d646b; font-size:27px}
+.stand-group.bronze .pl{color:#9a5526; font-size:24px}
+.stand-group.gold .tn{font-weight:800; font-size:17px; color:#7c5c0c}
+.stand-group.silver .tn{font-weight:800; font-size:15px; color:#474d53}
+.stand-group.bronze .tn{font-weight:800; font-size:15px; color:#7a4220}
+.stand-group.gold .logo, .stand-group.silver .logo, .stand-group.bronze .logo{width:26px; height:26px}
 
 /* ---------- Rules / format poster ---------- */
 .rules .section-title{font-size:22px}

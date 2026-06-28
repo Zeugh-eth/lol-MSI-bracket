@@ -112,24 +112,37 @@ const MEDAL = { 1: 'gold', 2: 'silver', 3: 'bronze' };
 function StandingsTable({ draw, scores }) {
   if (!draw) return <div className="standings"><div className="section-title">Standings</div><div className="standings-empty">Draw teams to begin.</div></div>;
   const rows = Standings.compute(Engine, draw, scores);
+  // Group consecutive rows that share a decided place (so 5th–6th / 7th–8th ties
+  // sit together under one label). Still-undecided teams stay as individual rows.
+  const groups = [];
+  for (const r of rows) {
+    const key = r.place == null ? 'alive-' + r.short : 'place-' + r.place;
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.rows.push(r);
+    else groups.push({ key, place: r.place, label: r.placeLabel, rows: [r] });
+  }
+  const name = s => (teamByShort[s] ? teamByShort[s].name : s);
   return (
     <div className="standings">
       <div className="section-title">Standings</div>
-      <table><tbody>
-        {rows.map(r => {
-          // Decided top-3 get a medal class (and are NOT shown as eliminated);
-          // other eliminated teams are muted/struck; still-alive teams are normal.
-          const medal = (!r.alive && MEDAL[r.place]) ? MEDAL[r.place] : '';
-          const cls = medal || (!r.alive ? 'out' : '');
+      <div className="stand-list">
+        {groups.map(g => {
+          const medal = MEDAL[g.place] || '';
           return (
-            <tr key={r.short} className={cls}>
-              <td className="pl">{r.placeLabel}</td>
-              <td><TeamLogo short={r.short} /></td>
-              <td>{teamByShort[r.short] ? teamByShort[r.short].name : r.short}</td>
-            </tr>
+            <div className={'stand-group' + (medal ? ' ' + medal : '')} key={g.key}>
+              <div className="pl">{g.label}</div>
+              <div className="stand-teams">
+                {g.rows.map(r => (
+                  <div className={'stand-team' + (!r.alive && !medal ? ' out' : '')} key={r.short}>
+                    <TeamLogo short={r.short} />
+                    <span className="tn">{name(r.short)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           );
         })}
-      </tbody></table>
+      </div>
     </div>
   );
 }
