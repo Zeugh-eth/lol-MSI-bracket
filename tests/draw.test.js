@@ -59,6 +59,10 @@ test('swap exchanges two positions and preserves the set', () => {
   assert.deepEqual([...after].sort(), [...before].sort());
 });
 
+test('the published actualDraw satisfies the pool + region rules', () => {
+  assert.ok(D.satisfies(DATA.actualDraw, byShort));
+});
+
 test('place from a null draw starts an empty 8-slot array', () => {
   const d = D.place(null, 5, 'G2');
   assert.equal(d.length, 8);

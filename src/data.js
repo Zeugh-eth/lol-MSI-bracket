@@ -32,5 +32,11 @@
     LR3:'2026-07-10T08:00:00Z',  WBF:'2026-07-09T08:00:00Z',
     LBF:'2026-07-11T08:00:00Z',  GF:'2026-07-12T08:00:00Z',
   };
-  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, schedule };
+  // The actual, drawn Stage 2 seeding (published 2026-07-01). Seed positions map
+  // to quarterfinals WQF1..WQF4 = [0,1],[2,3],[4,5],[6,7]. The Play-In qualifier
+  // (T1) occupies the 'PIW' slot, resolved via playInWinner.
+  //   WQF1 HLE v TSTW · WQF2 G2 v TES · WQF3 LYON v FURIA · WQF4 BLG v T1
+  const actualDraw = ['HLE', 'TSTW', 'G2', 'TES', 'LYON', 'FURIA', 'BLG', 'PIW'];
+  const playInWinner = 'T1';
+  return { __name: 'MSI_DATA', teams, playInCandidates, matchIds, schedule, actualDraw, playInWinner };
 });

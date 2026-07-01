@@ -27,3 +27,11 @@ test('14 canonical match ids and a UTC schedule time for each', () => {
 test('four play-in candidates', () => {
   assert.equal(DATA.playInCandidates.length, 4);
 });
+test('actualDraw is a full valid seeding with the play-in winner', () => {
+  const shorts = new Set(DATA.teams.map(t => t.short));
+  assert.equal(DATA.actualDraw.length, 8);
+  assert.equal(new Set(DATA.actualDraw).size, 8, 'no duplicate seeds');
+  for (const s of DATA.actualDraw) assert.ok(shorts.has(s), `unknown seed ${s}`);
+  assert.ok(DATA.actualDraw.includes('PIW'), 'PIW slot present for the play-in qualifier');
+  assert.ok(DATA.playInCandidates.some(c => c.short === DATA.playInWinner), 'playInWinner is a candidate');
+});

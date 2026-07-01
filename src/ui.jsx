@@ -349,9 +349,9 @@ function applyPlayIn(short) {
 function App() {
   const seedRef = React.useRef(1);
   const firstSave = React.useRef(true);
-  const [draw, setDraw] = useState(null);
+  const [draw, setDraw] = useState(DATA.actualDraw);
   const [scores, setScores] = useState(Engine.emptyScores());
-  const [playInPick, setPlayInPick] = useState(null);
+  const [playInPick, setPlayInPick] = useState(DATA.playInWinner);
   const [openId, setOpenId] = useState(null);
   const [copied, setCopied] = useState(false);
   const [justDrew, setJustDrew] = useState(false);
@@ -393,7 +393,8 @@ function App() {
     setJustDrew(true); setTimeout(() => setJustDrew(false), 700);
   }, []);
   const doReset = useCallback(() => {
-    setDraw(null); setScores(Engine.emptyScores()); setPlayInPick(null);
+    // Reset returns to the real published seeding (not a blank slate).
+    setDraw(DATA.actualDraw); setScores(Engine.emptyScores()); setPlayInPick(DATA.playInWinner);
     history.replaceState(null, '', location.pathname);
   }, []);
   const doCopy = useCallback(() => {
